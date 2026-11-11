@@ -6,6 +6,8 @@ The workflow also refreshes the separately versioned [export technology and deta
 
 It also refreshes the [six-sector GVA chart](BROAD_SECTORS.md): all-country OECD TiVA `VALU`, Eustat A38 and annual WDI exchange rates, with a separate manifest. Grouped data, source-cell verification, year-selection checks, the example figures, chart maker and downloads are rebuilt before publication.
 
+The [employment, productivity and goods-export extension](SECTOR_ECONOMY.md) then refreshes OECD TiM, BTiGE and Eustat inputs in its own manifest. `sector_economy.py` rebuilds the six-sector employment sums, exact-year GVA/person joins and custom export groups. Independent source-cell, conversion, ratio, workbook and selection checks run before rendering the five examples and packaging the site.
+
 Project website: **https://handysatria1.github.io/world-rd-income/**. Source repository and archived releases: **https://github.com/handysatria1/world-rd-income**.
 
 ## 1. Upload the source files
@@ -71,6 +73,16 @@ figures/
     broad_sector_chart.js
     test_broad_sector.js
     BROAD_SECTORS.md
+    sector_economy_sources.py
+    sector_economy.py
+    verify_sector_economy.py
+    sector_economy_figures.py
+    sector_economy_site.py
+    sector-economy.html
+    sector_economy_core.js
+    sector_economy_chart.js
+    test_sector_economy.js
+    SECTOR_ECONOMY.md
 ```
 
 The workflow is at [../../.github/workflows/update-world-rd-income.yml](../../.github/workflows/update-world-rd-income.yml) in this workspace. On GitHub's website, use **Add file → Create new file**, enter that exact `.github/workflows/update-world-rd-income.yml` path, paste its contents, and commit. Upload all source files shown under `figures/world-rd-income/` without flattening the folders. The public repository tracks source files; large generated `data/`, `output/` and `_site/` files are delivered through Pages and release assets. The refresh workflow generates them from fresh downloads.

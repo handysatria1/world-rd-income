@@ -48,6 +48,7 @@ jobs:
           node test_explorer.js
           node test_breakdown.js
           node test_broad_sector.js
+          node test_sector_economy.js
       - name: Check R&D units, annual joins and sector-field accounting
         run: python -m unittest test_nominal_rd.py test_sector_field_rd.py
       - name: Configure GitHub Pages
@@ -78,6 +79,11 @@ jobs:
           python verify_broad_sectors.py
           node test_broad_sector.js --built
           python broad_sector_figures.py
+          python sector_economy_sources.py --refresh
+          python sector_economy.py
+          python verify_sector_economy.py
+          node test_sector_economy.js --built
+          python sector_economy_figures.py
           python build_site.py --destination "$GITHUB_WORKSPACE/_site"
           python verify_broad_site.py --site "$GITHUB_WORKSPACE/_site"
       - name: Add current results to run summary

@@ -6,6 +6,8 @@ Explore worldwide R&D intensity, income, funding, performing sectors and researc
 
 **[Create a six-sector GVA stacked chart](https://handysatria1.github.io/world-rd-income/broad-sectors.html):** select and reorder economies, choose latest/common/explicit years, and download PNG/SVG/CSV. Includes 80 economies plus Basque Country, the supplied SIC-based classification, totals, source years and an Excel workbook. [Methods](figures/world-rd-income/BROAD_SECTORS.md).
 
+**[Employment, productivity and goods-export charts](https://handysatria1.github.io/world-rd-income/sector-economy.html):** five layouts with selectable/reorderable economies and years, same-year GVA per person, sector medians, PNG/SVG/CSV/PDF and Excel downloads. Examples use 2022 employment/productivity and 2024 exports. [Sources and classification](figures/world-rd-income/SECTOR_ECONOMY.md).
+
 - [Current complete research package](https://handysatria1.github.io/world-rd-income/world-rd-income.zip): exact source responses, provenance, data, workbook, figures, code and validation reports.
 - [Archived validated releases](https://github.com/handysatria1/world-rd-income/releases).
 - [Methodology and coverage](figures/world-rd-income/README.md).
@@ -54,6 +56,11 @@ python broad_sectors.py
 python verify_broad_sectors.py
 node test_broad_sector.js --built
 python broad_sector_figures.py
+python sector_economy_sources.py --refresh
+python sector_economy.py
+python verify_sector_economy.py
+node test_sector_economy.js --built
+python sector_economy_figures.py
 python build_site.py --destination ../../_site
 python verify_broad_site.py --site ../../_site
 ```

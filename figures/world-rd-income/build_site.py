@@ -14,6 +14,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from source_guide import build_source_guide
 from industry_site import build_industry_site, DOWNLOADS as INDUSTRY_DOWNLOADS
 from broad_sector_site import build_broad_sector_site, DOWNLOADS as BROAD_DOWNLOADS, FIGURES as BROAD_FIGURES
+from sector_economy_site import build_sector_economy_site, DOWNLOADS as SECTOR_DOWNLOADS, FIGURES as SECTOR_FIGURES
 
 ROOT = Path(__file__).resolve().parent
 
@@ -45,6 +46,7 @@ def build_site(destination: Path) -> None:
     build_source_guide(destination, report["built_utc"])
     build_industry_site(destination, report["built_utc"])
     build_broad_sector_site(destination)
+    build_sector_economy_site(destination)
 
     # Explicit package directories avoid publishing unrelated workspace material.
     files = [ROOT / name for name in (
@@ -55,6 +57,8 @@ def build_site(destination: Path) -> None:
         "industry_sources.py", "industry_data.py", "verify_industry.py", "industry_site.py", "industry.html", "INDUSTRY_DATA.md", "china_gva.py", "CHINA_GVA.md",
         "broad_sector_sources.py", "broad_sectors.py", "verify_broad_sectors.py", "broad_sector_figures.py",
         "broad_sector_site.py", "verify_broad_site.py", "broad-sectors.html", "broad_sector_core.js", "broad_sector_chart.js", "test_broad_sector.js", "BROAD_SECTORS.md",
+        "sector_economy_sources.py", "sector_economy.py", "verify_sector_economy.py", "sector_economy_figures.py",
+        "sector_economy_site.py", "sector-economy.html", "sector_economy_core.js", "sector_economy_chart.js", "test_sector_economy.js", "SECTOR_ECONOMY.md",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
         "nominal_rd.py", "test_nominal_rd.py",
         "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",
@@ -71,7 +75,8 @@ def build_site(destination: Path) -> None:
             archive.write(ROOT / name, "world-rd-income/" + name)
         for name in ("sources.html", "source_inventory.csv", "source_manifest.json",
                      "industry_source_inventory.csv", "industry_source_manifest.json",
-                     "broad_sector_source_inventory.csv", "broad_sector_source_manifest.json"):
+                     "broad_sector_source_inventory.csv", "broad_sector_source_manifest.json",
+                     "sector_economy_source_inventory.csv", "sector_economy_source_manifest.json"):
             archive.write(destination / name, "world-rd-income/" + name)
         # Keep the supplement's downloaded-data links usable after extracting the research ZIP.
         offline = (destination / "industry.html").read_text("utf-8")
@@ -90,6 +95,14 @@ def build_site(destination: Path) -> None:
         offline = offline.replace('href="BROAD_SECTORS.md"', 'href="figures/world-rd-income/BROAD_SECTORS.md"')
         offline = offline.replace('<a href="world-rd-income.zip">Full reproducible research ZIP</a>', 'Full research package: this extracted directory')
         archive.writestr("world-rd-income/broad-sectors.html", offline)
+        offline = (destination / "sector-economy.html").read_text("utf-8")
+        for name in SECTOR_DOWNLOADS:
+            offline = offline.replace(f'href="{name}"', f'href="figures/world-rd-income/data/{name}"')
+        for name in SECTOR_FIGURES:
+            offline = offline.replace(f'href="{name}"', f'href="figures/world-rd-income/output/{name}"')
+        offline = offline.replace('href="SECTOR_ECONOMY.md"', 'href="figures/world-rd-income/SECTOR_ECONOMY.md"')
+        offline = offline.replace('<a href="world-rd-income.zip">Full reproducible research ZIP</a>', 'Full research package: this extracted directory')
+        archive.writestr("world-rd-income/sector-economy.html", offline)
         for name in ("update-world-rd-income.yml", "publish-world-rd-snapshot.yml"):
             workflow = ROOT.parents[1] / ".github" / "workflows" / name
             if workflow.exists():
@@ -116,6 +129,8 @@ def build_site(destination: Path) -> None:
             links.append(f'<a href="{filename}">{extension.upper()}</a>')
         chart_links.append(title + ": " + " / ".join(links))
     document = document.replace(marker, (
+        '<p><strong><a href="sector-economy.html">Employment, productivity and goods-export chart maker</a></strong> · '
+        'Five layouts with selectable economies and years · <a href="sector_economy.xlsx">Full Excel workbook</a></p>'
         '<p><strong><a href="broad-sectors.html">Create a six-sector GVA stacked chart</a></strong> · '
         'Choose economies and years; download PNG, SVG and CSV · '
         '<a href="broad_sector_gva.xlsx">Broad-sector Excel workbook</a></p>'

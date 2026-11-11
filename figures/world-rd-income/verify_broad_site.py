@@ -57,7 +57,16 @@ def verify(stage):
             for key, field in [('shares', 'share_percent'), ('amounts', 'value_usd')]:
                 assert row[key][i] == (float(original[field]) if original[field] else None)
             assert row['status'] == original['coverage_status']
-    pages = ['index.html', 'industry.html', 'sources.html', 'broad-sectors.html']
+    sector_view = json.loads((stage / 'sector_economy_explorer.json').read_text('utf-8'))
+    sector_page = (stage / 'sector-economy.html').read_text('utf-8')
+    assert json.loads(re.search(r'<script id="sector-data" type="application/json">(.*?)</script>', sector_page, re.S)[1]) == sector_view
+    assert not re.search(r'__(?:FIGURES|BUILD_UTC|DATA|CORE|CHART)__', sector_page)
+    sector_report = json.loads((stage / 'sector_economy_verification.json').read_text('utf-8'))
+    assert sector_report['verification'] == 'passed'
+    sector_build = json.loads((stage / 'sector_economy_validation.json').read_text('utf-8'))
+    for filename, checksum in sector_build['output_sha256'].items():
+        assert hashlib.sha256((stage / filename).read_bytes()).hexdigest() == checksum
+    pages = ['index.html', 'industry.html', 'sources.html', 'broad-sectors.html', 'sector-economy.html']
     links_checked = 0
     for page in pages:
         links = Links()
@@ -75,7 +84,7 @@ def verify(stage):
             for link in links.links:
                 assert 'world-rd-income/' + link in members, (page, link)
         raw_checked = 0
-        for folder in ['raw', 'industry_raw', 'broad_sector_raw']:
+        for folder in ['raw', 'industry_raw', 'broad_sector_raw', 'sector_economy_raw']:
             prefix = 'world-rd-income/figures/world-rd-income/data/' + folder + '/'
             manifest = json.loads(archive.read(prefix + 'manifest.json'))
             for name, info in manifest.items():
@@ -85,7 +94,7 @@ def verify(stage):
     result = {'validation': 'passed', 'workbook_data_rows_checked': checked,
               'embedded_economy_years_checked': len(view['rows']), 'site_links_checked': links_checked,
               'research_zip_members': len(members), 'archived_response_hashes_checked': raw_checked,
-              'site_files': len(list(stage.iterdir()))}
+              'site_files': len(list(stage.iterdir())), 'sector_economy_verification': sector_report}
     print(json.dumps(result, indent=2))
     return result
 
