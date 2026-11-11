@@ -11,6 +11,8 @@
   const exampleEconomies = ["USA","CHN","KOR","GBR","SGP","ES-PV"];
   let breakdownEconomies = [...exampleEconomies];
   let view = "snapshot", current = null, exported = [];
+  let shared = null;
+  const incomeFor=iso=>shared?IncomeCore.classify(shared.income,iso,shared.vintage,shared.combine):null;
   const fmt = (v, digits = 2) => v == null || !Number.isFinite(v) ? "—" : v.toLocaleString("en-US", {maximumFractionDigits: digits, minimumFractionDigits: digits});
   const short = v => v >= 1e12 ? `${+(v / 1e12).toFixed(1)}tn` : v >= 1e9 ? `${+(v / 1e9).toFixed(1)}bn` : v >= 1e6 ? `${+(v / 1e6).toFixed(1)}m` : v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : `${+v.toFixed(2)}`;
   const unit = () => $("metric").value === "nominal" ? "current US dollars" : "current international dollars (PPP)";
@@ -40,6 +42,7 @@
       timing: $("timing").value, scale: $("scale").value};
   }
   function setView(value) {
+    if(shared&&parent.Dashboard){parent.Dashboard.navigate(value);return;}
     view = value;
     if (["history", "sector"].includes(view) && !$("country").value) $("country").value = "GBR";
     render();
@@ -76,6 +79,7 @@
     $("export").textContent = view === "sector" ? "Download selected cells CSV" : "Download plotted CSV";
     $("history-button").hidden = ["history", "breakdown"].includes(view);
     $("history-button").disabled = !$("country").value;
+    if(shared&&view==='snapshot'&&['latest','common'].includes(shared.year))$("rd-controls").hidden=true;
   }
   function stat(label, value, target = $("stats")) {
     const node = document.createElement("div"); node.className = "stat";
@@ -89,6 +93,7 @@
       `Reported years: ${e.rd.years.join(", ") || "none"} (${e.rd.years.length}/${e.rd.end - e.rd.start + 1})\n` +
       `Missing years: ${e.rd.missing.join(", ") || "none"}\nSource: ${e.rd.sourceName}\nFlags: ${e.rd.flags || "none reported"}` +
       (c.note ? `\n${c.note}\nGDP flags: ${c.gdp[$("metric").value][e.gdpYear]?.flags || ""}` : "") +
+      (incomeFor(c.iso)?`\nWorld Bank: ${incomeFor(c.iso).label} · ${incomeFor(c.iso).vintage}`:'')+
       (e.reasons.length ? `\nExcluded: ${e.reasons.join("; ")}` : "");
   }
   function tooltip(node, content, onClick) {
@@ -101,6 +106,7 @@
       const x = event.clientX ?? rect.x, y = event.clientY ?? rect.y;
       tip.style.left = `${Math.max(8, Math.min(x + 16, window.innerWidth - tip.offsetWidth - 10))}px`;
       tip.style.top = `${Math.max(8, Math.min(y + 14, window.innerHeight - tip.offsetHeight - 10))}px`;
+      if(typeof positionDashboardTooltip==='function')positionDashboardTooltip(tip,x,y);
     };
     node.addEventListener("pointerenter", show); node.addEventListener("focus", show);
     node.addEventListener("pointerleave", () => { $("tooltip").hidden = true; });
@@ -194,7 +200,9 @@
         markerBoxes.push({x:sx-6,y:sy-6,width:12,height:12});
       }
       if (chosen) element("circle", {cx:x,cy:y,r:11,fill:"none",stroke:TEAL,"stroke-width":1,opacity:.4}, null, group);
-      const point = element("circle", {cx:x,cy:y,r:chosen?6:4.5,fill:row.end.rd.complete?TEAL:"white",stroke:TEAL,"stroke-width":1.3,class:"point","data-endpoint":"end"}, null, group);
+       const income=incomeFor(row.country.iso),shape=income?.code||'HIC',size=chosen?6:4.5;
+       const attrs={fill:row.end.rd.complete?TEAL:'white',stroke:TEAL,'stroke-width':1.3,class:'point','data-endpoint':'end','data-income':shape};
+       const point=shape==='HIC'?element('circle',{cx:x,cy:y,r:size,...attrs},null,group):shape==='UMC'?element('rect',{x:x-size,y:y-size,width:size*2,height:size*2,...attrs},null,group):element('path',{d:shape==='LIC'?`M${x},${y-size*1.4} L${x+size*1.3},${y+size} L${x-size*1.3},${y+size} Z`:shape==='UNK'?`M${x-size},${y-size} L${x+size},${y+size} M${x-size},${y+size} L${x+size},${y-size}`:`M${x},${y-size*1.4} L${x+size*1.2},${y} L${x},${y+size*1.4} L${x-size*1.2},${y} Z`,...attrs},null,group);
       tooltip(point, details(row), () => inspect(row.country.iso));
       markerBoxes.push({x:x-6,y:y-6,width:12,height:12});
       entries.push({row, group, x, y});
@@ -237,12 +245,13 @@
   }
   function plottedTable(result,opts) {
     exported=result.rows.map(r=>({economy:r.country.name,code:r.country.iso,rd_source:r.end.rd.sourceName,
+      ...(incomeFor(r.country.iso)?{income_group:incomeFor(r.country.iso).label,income_code:incomeFor(r.country.iso).code,income_classification:incomeFor(r.country.iso).vintage}:{}),
       geography_type:r.country.geographyType||"economy",parent_economy:r.country.parentEconomy||"",regression_included:r.country.regressionEligible!==false,regional_note:r.country.note||"",
       ...(r.start?{start_gdp_year:r.start.gdpYear,start_gdp:r.start[opts.metric],start_rd:r.start.rd.value,start_rd_window:rdWindow(r.start.rd.start,r.start.rd.end),start_rd_years:r.start.rd.years.join(";"),start_rd_flags:r.start.rd.flags}:{}),
       gdp_year:r.end.gdpYear,gdp_unit:unit(),gdp:r.end[opts.metric],rd:r.end.rd.value,rd_window:rdWindow(r.end.rd.start,r.end.rd.end),rd_years:r.end.rd.years.join(";"),rd_missing:r.end.rd.missing.join(";"),rd_flags:r.end.rd.flags,
       ...(r.start?{gdp_change:r.end[opts.metric]-r.start[opts.metric],gdp_change_percent:(r.end[opts.metric]/r.start[opts.metric]-1)*100,rd_change_pp:r.end.rd.value-r.start.rd.value}:{}),
       gdp_status:r.country.gdp[opts.metric][r.end.gdpYear]?.flags||"",gdp_footnote:r.country.gdp[opts.metric][r.end.gdpYear]?.note||""}));
-    const columns=[{key:"economy",label:"Economy"},{key:"code",label:"Code"}];
+    const columns=[{key:"economy",label:"Economy"},{key:"code",label:"Code"},...(shared?[{key:'income_group',label:'World Bank group'},{key:'gdp_year',label:'GDP year'}]:[])];
     if(view==="compare")columns.push({key:"start_gdp",label:`GDP ${opts.from}`,format:v=>fmt(v)},{key:"start_rd",label:"Earlier R&D (%)",format:v=>fmt(v,4)});
     columns.push({key:"gdp",label:`GDP ${view==="compare"?opts.to:opts.gdpYear}`,format:v=>fmt(v)},{key:"rd",label:"R&D mean (%)",format:v=>fmt(v,4)});
     if(view==="compare")columns.push({key:"gdp_change_percent",label:"GDP change (%)",format:v=>fmt(v,1)},{key:"rd_change_pp",label:"R&D change (pp)",format:v=>fmt(v,3)},{key:"start_rd_years",label:"Earlier R&D years"});
@@ -428,6 +437,14 @@
     $("inspector").textContent="Hover over or click a point to inspect its values, reporting years and source.";
     const opts=options();
     try {
+      if(shared&&['history','sector'].includes(view)&&!$('country').value)throw new Error('Select an economy above to display this view.');
+      if(shared&&view==='sector'&&['latest','common'].includes(shared.year)){
+        const ds=data.sectorField,ci=ds.columns.indexOf('iso3'),yi=ds.columns.indexOf('year'),ai=ds.columns.indexOf('amount'),bi=ds.columns.indexOf('basis'),available=new Map();
+        for(const r of ds.rows)if(r[bi]===$('gerdBasis').value&&r[ai]!=null){if(!available.has(r[ci]))available.set(r[ci],new Set());available.get(r[ci]).add(r[yi]);}
+        const ids=shared.year==='common'?shared.ids:[$('country').value],year=core.range(data.firstYear,data.lastYear).reverse().find(y=>ids.length&&ids.every(iso=>available.get(iso)?.has(y)));
+        if(year==null)throw new Error('No '+(shared.year==='common'?'common ':'')+'usable sector/field year for the selected economies and price basis.');
+        $('sectorYear').value=year;
+      }
       $("legend").className="legend";$("coverage-note").className="metadata";
       if(view==="breakdown") {
         $("breakdown-countries").replaceChildren();
@@ -472,16 +489,19 @@
         table(exported,[{key:"year",label:"Year"},{key:"gdp_current_usd",label:"GDP/person (current US$)",format:v=>fmt(v)},{key:"gdp_current_international_dollars_ppp",label:"GDP/person (current international $, PPP)",format:v=>fmt(v)},{key:"rd_percent_gdp",label:"Annual R&D (% GDP)",format:v=>fmt(v,4)},{key:"rd_nominal_usd_derived",label:"Nominal R&D (derived US$)",format:v=>fmt(v,0)},...(current.source==="eustat"?[{key:"rd_eustat_eur_reported",label:"Eustat R&D (reported EUR)",format:v=>fmt(v,0)},{key:"rd_eustat_ppp_derived",label:"R&D (derived PPP, Spain proxy)",format:v=>fmt(v,0)}]:[{key:"rd_nominal_local_oecd_reported",label:"OECD R&D (reported national currency)",format:v=>fmt(v,0)}]),{key:"rd_flags",label:"R&D flags"}]);
         $("table-title").textContent=`${current.country.name}: annual history`;$("table-description").textContent="A dash means missing, not zero. National-currency amounts are units, not millions, and cannot be compared across currencies. CSV includes separate OECD/WDI/direct-UIS US$ estimates. Data include later historical revisions.";$("audit-section").hidden=true;
       } else {
-        current=view==="compare"?core.comparison(data,opts):core.snapshot(data,opts);
+        const sample=shared?{...data,countries:data.countries.filter(c=>shared.ids.includes(c.iso))}:data;
+        current=view==="compare"?core.comparison(sample,opts):shared&&['latest','common'].includes(shared.year)?core.latestSnapshot(sample,opts,shared.year==='common'):core.snapshot(sample,opts);
         const fitRows=core.regressionRows(current.rows),endFit=core.ols(fitRows.map(r=>({x:r.end[opts.metric],y:r.end.rd.value})));
         $("chart-title").textContent=view==="compare"?`Country positions · ${opts.from} → ${opts.to}`:`R&D intensity and income · GDP ${opts.gdpYear}`;
         $("selection-description").textContent=view==="compare"?`Earlier R&D: ${rdWindow(current.earlyStart,current.earlyEnd)} · Later R&D: ${rdWindow(opts.rdStart,opts.rdEnd)} · ${opts.timing==="fixed"?"R&D held fixed; horizontal movement only":"R&D window shifts with GDP year"}.`:`R&D ${rdWindow(opts.rdStart,opts.rdEnd)} · ${opts.strict?"Every requested R&D year required":"Mean of reported R&D years"} · ${unit()}.`;
+        if(current.latest){$('chart-title').textContent='R&D intensity and income · '+(current.common?'latest common usable year':'latest usable year per economy');$('selection-description').textContent='Each point uses R&D and both income measures from the same actual year, shown in its tooltip and table. '+(current.common?'Common year: '+(current.commonYear??'none')+'.':'Reporting years differ between economies.');}
         stat(view==="compare"?"Economies at both endpoints":"Economies plotted",current.rows.length);
         stat("Complete R&D coverage",current.rows.filter(r=>r.end.rd.complete&&(!r.start||r.start.rd.complete)).length);
         stat("Economies in regression",fitRows.length);
         if(view==="compare") {const fit=core.ols(fitRows.map(r=>({x:r.start[opts.metric],y:r.start.rd.value})));stat(`R² · ${opts.from}`,fit?fmt(fit.r2,3):"—");}
-        stat(`R² · ${view==="compare"?opts.to:opts.gdpYear}`,endFit?fmt(endFit.r2,3):"—");
+        stat(`R² · ${current.latest?'plotted years':view==="compare"?opts.to:opts.gdpYear}`,endFit?fmt(endFit.r2,3):"—");
         $("legend").innerHTML=(view==="compare"?`<span><b class="key">□ → ●</b>${opts.from} → ${opts.to}; faint dashed fit = earlier year</span>`:"")+ '<span><b class="key">●</b>All R&D years reported</span><span><b class="key">○</b>Incomplete R&D window</span><span>Dotted curve: R&D = a + b ln(GDP)</span>';
+        if(shared)$('legend').textContent=(shared.combine?'● High · ◆ Middle · ▲ Low · × Unclassified/region':'● High · ■ Upper-middle · ◆ Lower-middle · ▲ Low · × Unclassified/region')+' income · '+(shared.vintage==='current'?shared.income.currentVintage:shared.vintage)+'. Filled: complete R&D window; hollow: incomplete. '+(view==='compare'?'Earlier positions: outlined squares. ':'')+'Dotted curve: R&D = a + b ln(GDP); group/sample filters refit it.';
         scatter(current,opts);plottedTable(current,opts);
         $("coverage-note").textContent=view==="compare"?`${current.startEligible} economies eligible at the earlier endpoint; ${current.endEligible} at the later endpoint; ${current.rows.length} in the common comparison. Both fits use that same common sample. The CSV records the selected R&D provider and actual reporting years.`:`${current.rows.length} of ${data.countries.length} audited economies have R&D and both income measures for this selection. Missing values are excluded; hollow points and * labels mark incomplete R&D coverage.`;
         if(!endFit)$("coverage-note").textContent+=" Regression unavailable: fewer than three valid points or no variation.";
@@ -518,4 +538,19 @@
   // Expose the pure model and current selection for reproducible browser verification.
   window.RDExplorer={data,core,get view(){return view;},get result(){return current;},get exported(){return exported;},render};
   reset();
+  let sharedRequest=0;
+  if(typeof dashboardBridge!=='undefined')dashboardBridge.register({async set(state){
+    const token=++sharedRequest;
+    if(state.kind==='sector'&&!data.sectorField.rows.length)data.sectorField=await loadDashboardJSON('national-sector.json.gz');
+    if(state.kind==='breakdown'&&!data.breakdowns.rows.length)data.breakdowns=await loadDashboardJSON('national-breakdowns.json.gz');
+    if(token!==sharedRequest)return;
+    const previous=shared;shared=state;view=state.kind;
+    breakdownEconomies=state.ids.filter(iso=>data.countries.some(c=>c.iso===iso));
+    const previousCountry=$('country').value;$('country').replaceChildren(new Option('Choose an economy',''));
+    for(const c of data.countries.filter(c=>state.ids.includes(c.iso)))$('country').add(new Option(`${c.name} (${c.iso})`,c.iso));
+    if(state.ids.includes(previousCountry))$('country').value=previousCountry;
+    if(!state.ids.includes($('country').value))$('country').value=state.ids.includes('GBR')?'GBR':state.ids[0]||'';
+    if(/^\d{4}$/.test(state.year)&&(state.year!==previous?.year||state.kind!==previous?.kind)){for(const id of ['gdpYear','rdEnd','sectorYear'])$(id).value=state.year;$('rdMode').value='1';}
+    render();
+  },get rows(){return current;}});
 })();

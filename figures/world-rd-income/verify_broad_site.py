@@ -45,7 +45,7 @@ def verify(stage):
         checked += count
     workbook.close()
     view = json.loads((stage / 'broad_sector_explorer.json').read_text('utf-8'))
-    document = (stage / 'broad-sectors.html').read_text('utf-8')
+    document = (stage / 'view-gva.html').read_text('utf-8')
     embedded = json.loads(re.search(r'<script id="broad-data" type="application/json">(.*?)</script>', document, re.S)[1])
     assert view == embedded
     assert not re.search(r'__(?:CLASSIFICATION|BUILD_UTC|DATA|CORE|CHART)__', document)
@@ -58,7 +58,7 @@ def verify(stage):
                 assert row[key][i] == (float(original[field]) if original[field] else None)
             assert row['status'] == original['coverage_status']
     sector_view = json.loads((stage / 'sector_economy_explorer.json').read_text('utf-8'))
-    sector_page = (stage / 'sector-economy.html').read_text('utf-8')
+    sector_page = (stage / 'view-economy.html').read_text('utf-8')
     assert json.loads(re.search(r'<script id="sector-data" type="application/json">(.*?)</script>', sector_page, re.S)[1]) == sector_view
     assert not re.search(r'__(?:FIGURES|BUILD_UTC|DATA|CORE|CHART)__', sector_page)
     sector_report = json.loads((stage / 'sector_economy_verification.json').read_text('utf-8'))
@@ -67,14 +67,15 @@ def verify(stage):
     for filename, checksum in sector_build['output_sha256'].items():
         assert hashlib.sha256((stage / filename).read_bytes()).hexdigest() == checksum
     rd_view = json.loads((stage / 'rd_industry_explorer.json').read_text('utf-8'))
-    rd_page = (stage / 'rd-industry.html').read_text('utf-8')
+    rd_page = (stage / 'view-rd.html').read_text('utf-8')
     assert json.loads(re.search(r'<script id="rd-industry-data" type="application/json">(.*?)</script>', rd_page, re.S)[1]) == rd_view
     assert not re.search(r'__(?:STYLE|BUILD_UTC|DATA|CORE|CHART)__', rd_page)
     rd_report = json.loads((stage / 'rd_industry_verification.json').read_text('utf-8'))
     assert rd_report['verification'] == 'passed'
     for filename, checksum in json.loads((stage / 'rd_industry_validation.json').read_text('utf-8'))['output_sha256'].items():
         assert hashlib.sha256((stage / filename).read_bytes()).hexdigest() == checksum
-    pages = ['index.html', 'industry.html', 'sources.html', 'broad-sectors.html', 'sector-economy.html', 'rd-industry.html']
+    pages = ['index.html', 'industry.html', 'sources.html', 'broad-sectors.html', 'sector-economy.html', 'rd-industry.html',
+             'view-national.html','view-rd.html','view-economy.html','view-gva.html','view-research.html','view-detail.html','view-sources.html']
     links_checked = 0
     for page in pages:
         links = Links()

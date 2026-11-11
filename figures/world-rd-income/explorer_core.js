@@ -58,6 +58,18 @@
     return {audit, rows: audit.filter(r => r.start.eligible && r.end.eligible), earlyStart, earlyEnd,
       startEligible: audit.filter(r => r.start.eligible).length, endEligible: audit.filter(r => r.end.eligible).length};
   }
+  function latestSnapshot(data, options, common=false) {
+    const years=range(data.firstYear,data.lastYear).reverse();
+    const at=(country,year)=>endpoint(country,year,year,year,false);
+    const commonYear=common&&data.countries.length?years.find(y=>data.countries.every(c=>at(c,y).eligible)):null;
+    const audit=data.countries.map(country=>{
+      const year=common?commonYear:years.find(y=>at(country,y).eligible);
+      const end=at(country,year??data.lastYear);
+      if(year==null){end.eligible=false;end.reasons.push(common?'No common exact year across the selected economies':'No year with R&D and both income measures');}
+      return {country,end};
+    });
+    return {audit,rows:audit.filter(r=>r.end.eligible),latest:true,common,commonYear};
+  }
   function history(data, iso, from, to) {
     checkYears(data, from, to);
     const country = data.countries.find(c => c.iso === iso);
@@ -142,7 +154,7 @@
     const xy = xs.reduce((a, v, i) => a + (v - mx) * (ys[i] - my), 0);
     return {n, intercept: my - xy / xx * mx, slope: xy / xx, r2: Math.max(0, Math.min(1, xy * xy / (xx * yy)))};
   }
-  const api = {range, checkYears, pickSource, rdSummary, snapshot, comparison, history, sectorField, ols, regressionRows, SOURCE_NAMES};
+  const api = {range, checkYears, pickSource, rdSummary, snapshot, latestSnapshot, comparison, history, sectorField, ols, regressionRows, SOURCE_NAMES};
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.RDCore = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

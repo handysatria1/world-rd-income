@@ -2,7 +2,7 @@
 
 **[Open the live dashboard](https://handysatria1.github.io/world-rd-income/)** · **[Download archived builds](https://github.com/handysatria1/world-rd-income/releases)**. The source repository contains the code; linked `data/` and `output/` files below are generated locally or included in the downloadable research package.
 
-This extends the previous OECD reconstruction to worldwide available data. Scatterplots show **gross domestic expenditure on R&D (GERD) as a percentage of GDP**. The database also includes nominal R&D amounts and GERD classified by **performer × field**, **performer × funding source**, and **performer × research type**. GDP per capita is available in **current US dollars** and **current international dollars at purchasing power parities (PPP)**. The interactive explorer covers **2000–2025**; its default scatter selection and static scatter figures use **2020–2024 R&D against 2025 income**.
+This extends the previous OECD reconstruction to worldwide available data. Scatterplots show **gross domestic expenditure on R&D (GERD) as a percentage of GDP**. The database also includes nominal R&D amounts and GERD classified by **performer × field**, **performer × funding source**, and **performer × research type**. GDP per capita is available in **current US dollars** and **current international dollars at purchasing power parities (PPP)**. The unified dashboard covers **2000–2025** and defaults to each economy's **latest usable exact year**, labelled individually. The earlier standalone explorer and static scatter figures use **2020–2024 R&D against 2025 income**.
 
 **Snapshot note:** Fixed-year numerical results, coverage counts, examples and captions below describe the initial **10 November 2026** snapshot. Historical responses were added on **11 November 2026**. Every rebuild generates [current static results and captions](data/current_results.md), current CSVs/workbook and dates on the interactive chart. Use those generated outputs after refreshing. [Automatic weekly refresh and GitHub Pages setup](AUTOMATION.md).
 
@@ -15,6 +15,15 @@ If you use this dashboard, code, derived datasets or figures, please cite:
 [BibTeX](CITATION.bib) · [Citation metadata (CFF)](CITATION.cff). For reproducibility, record the archived release tag or commit, the data build timestamp and your access date. Acknowledge the original data providers for the observations used; exact source details are preserved in the downloads.
 
 ## Interactive explorer
+
+All charts now share one dashboard with economy selection, income filters and applicable exact-year controls. Choose a view from the menu; older chart addresses redirect into it. National and industry datasets load on demand.
+
+- **Industry classification:** switch between the original six groups and **16 research groups** for GVA, BERD and employment. Group 16 is **R–T only**. Compare stacked shares, all-group panels or a single group, with national context and CSV/SVG/PNG/Excel downloads. [Definitions and source reconstruction](RESEARCH_GROUPS.md).
+- **Coverage explanations:** hover, focus or tap an industry R&D segment to inspect included activities, missing coverage, flags and source locators. Hatching means partial activity coverage; it does not measure the missing expenditure percentage.
+- **Income groups:** official World Bank high/upper-middle/lower-middle/low income, fixed current or historical vintages, optional combined middle income and distinct snapshot symbols. The four-panel comparison defaults to **2000 versus 2013**, paired samples by indicator, unweighted rate means and observed-country count sums. [Definitions, aggregation and limitations](INCOME_GROUPS.md).
+- **Detailed tables:** shared selections filter exports, source-specific division-level GVA and the China 2023 native table. Exact-year GVA history loads per economy; no nearby year is substituted.
+
+The extracted unified research archive requires an HTTP server (`python -m http.server` from its root). It retains the original standalone pages and uncompressed source CSVs. Large additional website downloads use lossless `.csv.gz` compression.
 
 **[Industry R&D and the economy](https://handysatria1.github.io/world-rd-income/rd-industry.html):** six-group BERD classification combined with same-year GVA, employment, productivity, goods exports, GERD and income. Six interactive layouts; partial groups, unallocated R&D and Basque companies + PNPI scope are explicit. [Methods and reproduction](RD_INDUSTRY.md) · [Combined Excel workbook](https://handysatria1.github.io/world-rd-income/rd_industry_economy.xlsx).
 

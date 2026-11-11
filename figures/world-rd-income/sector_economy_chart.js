@@ -80,3 +80,4 @@ el("print").onclick=()=>window.print();el("clear").onclick=()=>{selected=[];choo
 for(let y=2025;y>=2000;y--){const o=document.createElement("option");o.value=y;o.textContent=y;el("year").append(o);}el("year").value="2022";
 el("kind").addEventListener("change",()=>{el("title-input").value=titles[el("kind").value];el("year").value=el("kind").value==="exports"?"2024":"2022";render();});
 for(const id of["year","unit","decimals"])el(id).addEventListener("change",render);el("title-input").addEventListener("input",render);choose();render();
+if(typeof dashboardBridge!=='undefined')dashboardBridge.register({set({ids,year,kind,names}){selected=ids;for(const iso of ids)if(!countries.has(iso))countries.set(iso,{iso,name:names[iso],display:names[iso]});if(el('kind').value!==kind){el('kind').value=kind;el('title-input').value=titles[kind];}el('year').value=year;choose();render();},get rows(){return current;}});

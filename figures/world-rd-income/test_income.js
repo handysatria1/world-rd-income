@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('assert/strict'),core=require('./income_core.js'),national=require('./explorer_core.js');
+const country=(iso,current,values,region=false)=>({iso,name:iso,current,region,history:{FY2001:'LIC'},series:Object.fromEntries(['rd','researchers','patents','publications'].map(k=>[k,Object.fromEntries(values.map((v,i)=>[2000+i*13,{v,record:i+1}]))]))});
+const data={currentVintage:'FY2027',indicators:Object.fromEntries(['rd','researchers','patents','patentsNonresident','publications'].map(k=>[k,{code:k}])),countries:[country('A','HIC',[0,4]),country('B','HIC',[2,null]),country('C','LMC',[1,3]),country('D','UMC',[3,5]),country('R','HIC',[100,100],true)]};
+const opts={years:[2000,2013],vintage:'current',combine:false,sample:'paired',stat:'auto',patents:'resident'};
+let result=core.aggregate(data,opts),r=result.rows.find(r=>r.metric==='rd'&&r.group==='HIC'&&r.year===2000);
+assert.equal(r.value,0);assert.equal(r.n,1);assert.equal(r.eligible,2);assert.equal(r.included,'A');assert.equal(r.missing,'B');
+assert.equal(result.rows.find(r=>r.group==='LIC').value,null);
+r=core.aggregate(data,{...opts,sample:'available'}).rows.find(r=>r.metric==='rd'&&r.group==='HIC'&&r.year===2000);assert.equal(r.value,1);assert.equal(r.n,2);
+r=core.aggregate(data,{...opts,combine:true}).rows.find(r=>r.metric==='rd'&&r.group==='MIC'&&r.year===2000);assert.equal(r.value,2);assert.equal(r.n,2);
+assert.equal(core.classify(data,'A','FY2001').code,'LIC');assert.equal(core.classify(data,'absent').code,'UNK');
+assert.equal(core.aggregate(data,{...opts,ids:[]}).rows[0].n,0);
+assert.equal(core.value(data.countries[0],'patents',2000,'total'),null);data.countries[0].series.patentsNonresident={2000:{v:5}};assert.equal(core.value(data.countries[0],'patents',2000,'total'),5);
+const nd={firstYear:2000,lastYear:2002,countries:[{iso:'A',rd:{wdi:{2000:{v:1},2002:{v:2}}},gdp:{nominal:{2000:{v:100},2001:{v:110}},ppp:{2000:{v:200},2001:{v:220}}}},{iso:'B',rd:{wdi:{2002:{v:3}}},gdp:{nominal:{2002:{v:100}},ppp:{2002:{v:200}}}}]};
+assert.deepEqual(national.latestSnapshot(nd,{}).rows.map(r=>r.end.gdpYear),[2000,2002]);assert.equal(national.latestSnapshot(nd,{},true).rows.length,0);
+console.log('Income sampling, missingness, classification and latest-year checks passed.');

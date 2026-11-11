@@ -7,6 +7,7 @@ from pathlib import Path
 
 from industry_site import sha
 from rd_industry import OUTPUTS
+from rd_industry_details import build_details
 
 ROOT = Path(__file__).parent
 DOWNLOADS = [*OUTPUTS, 'rd_industry_economy.xlsx', 'rd_industry_explorer.json', 'rd_industry_validation.json', 'rd_industry_verification.json']
@@ -36,8 +37,11 @@ def build_rd_industry_site(destination):
     (destination / 'RD_INDUSTRY.md').write_bytes((ROOT / 'RD_INDUSTRY.md').read_bytes())
     serialized = (data / 'rd_industry_explorer.json').read_text('utf-8').replace('<', '\\u003c').replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')
     document = (ROOT / 'rd-industry.html').read_text('utf-8')
+    details = json.dumps(build_details(data), ensure_ascii=False, separators=(',', ':'))
+    (destination / 'rd_industry_details.json').write_text(details + '\n', encoding='utf-8')
     style = re.search(r'<style>(.*?)</style>', (ROOT / 'sector-economy.html').read_text('utf-8'), re.S)[1]
     for marker, value in {'__STYLE__': style, '__BUILD_UTC__': escape(report['built_utc']), '__DATA__': serialized,
+                          '__DETAILS__': details.replace('<', '\\u003c'), '__COVERAGE__': (ROOT / 'rd_coverage.js').read_text('utf-8'),
                           '__CORE__': (ROOT / 'rd_industry_core.js').read_text('utf-8'), '__CHART__': (ROOT / 'rd_industry_chart.js').read_text('utf-8')}.items():
         assert document.count(marker) == 1
         document = document.replace(marker, value)

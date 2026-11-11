@@ -56,3 +56,4 @@ el("csv").onclick=()=>{const rows=[["economy_code","economy","year","source","gr
 el("print").onclick=()=>window.print();el("reset").onclick=()=>{selected=data.defaults.slice();choose();render();};el("clear").onclick=()=>{selected=[];choose();render();};el("search").addEventListener("input",choices);
 for(let y=2025;y>=2000;y--){const o=document.createElement("option");o.value=y;o.textContent=y;el("year").append(o);}
 for(const id of ["year","metric","decimals"])el(id).addEventListener("change",render);el("title-input").addEventListener("input",render);choose();render();
+if(typeof dashboardBridge!=='undefined')dashboardBridge.register({set({ids,year,names}){selected=ids;for(const iso of ids)if(!countries.has(iso))countries.set(iso,{iso,name:names[iso],display:names[iso]});el('year').value=year;choose();render();},get rows(){return current;}});

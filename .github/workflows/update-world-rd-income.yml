@@ -23,7 +23,7 @@ jobs:
     # Scheduled/manual/push publications always use the repository's default branch.
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: figures/world-rd-income
@@ -50,6 +50,7 @@ jobs:
           node test_broad_sector.js
           node test_sector_economy.js
           node test_rd_industry.js
+          node test_income.js
       - name: Check R&D units, annual joins and sector-field accounting
         run: python -m unittest test_nominal_rd.py test_sector_field_rd.py
       - name: Configure GitHub Pages
@@ -90,8 +91,12 @@ jobs:
           python rd_industry.py
           python verify_rd_industry.py
           node test_rd_industry.js --built
+          python income_sources.py --refresh
+          python income_data.py
+          python research_groups.py
           python build_site.py --destination "$GITHUB_WORKSPACE/_site"
           python verify_broad_site.py --site "$GITHUB_WORKSPACE/_site"
+          python verify_dashboard.py --site "$GITHUB_WORKSPACE/_site"
       - name: Add current results to run summary
         run: cat data/current_results.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload validated website

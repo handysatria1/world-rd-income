@@ -16,6 +16,7 @@ from industry_site import build_industry_site, DOWNLOADS as INDUSTRY_DOWNLOADS
 from broad_sector_site import build_broad_sector_site, DOWNLOADS as BROAD_DOWNLOADS, FIGURES as BROAD_FIGURES
 from sector_economy_site import build_sector_economy_site, DOWNLOADS as SECTOR_DOWNLOADS, FIGURES as SECTOR_FIGURES
 from rd_industry_site import build_rd_industry_site, DOWNLOADS as RD_INDUSTRY_DOWNLOADS
+from dashboard_site import build_dashboard
 
 ROOT = Path(__file__).resolve().parent
 
@@ -63,6 +64,9 @@ def build_site(destination: Path) -> None:
         "sector_economy_site.py", "sector-economy.html", "sector_economy_core.js", "sector_economy_chart.js", "test_sector_economy.js", "SECTOR_ECONOMY.md",
         "rd_industry_sources.py", "rd_industry_mapping.py", "rd_industry_native.py", "rd_industry.py", "verify_rd_industry.py", "test_rd_industry.py",
         "rd_industry_site.py", "rd-industry.html", "rd_industry_core.js", "rd_industry_chart.js", "test_rd_industry.js", "RD_INDUSTRY.md",
+        "rd_industry_details.py", "rd_coverage.js", "income_sources.py", "income_data.py", "income_core.js", "income_chart.js", "INCOME_GROUPS.md",
+        "dashboard_site.py", "dashboard.html", "dashboard.css", "dashboard.js", "dashboard_bridge.js",
+        "research_groups.py", "research-groups.html", "research_group_chart.js", "RESEARCH_GROUPS.md", "verify_dashboard.py", "test_income.js",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
         "nominal_rd.py", "test_nominal_rd.py",
         "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",
@@ -176,14 +180,29 @@ def build_site(destination: Path) -> None:
         '<a href="rd_research_oecd_alternatives.csv">Preserved OECD UK research estimates</a></p>'
         '<details><summary>Example stacked charts · 2020–2024</summary><p>' + '<br>'.join(chart_links) + '</p></details>'
     ))
-    (destination / "index.html").write_text(document, encoding="utf-8")
-    offline = document.replace('<a href="world-rd-income.zip">Download this build: figures, Excel/CSV data, exact source responses, methodology and Python/JavaScript code (ZIP)</a>', 'Full research package: this extracted directory')
+    dashboard_files = build_dashboard(destination)
+    offline = (destination / 'index.html').read_text('utf-8').replace('<a href="world-rd-income.zip" download>Download research archive ↓</a>', 'Research archive · extracted copy')
     for folder in ("data", "output"):
         for path in (ROOT / folder).iterdir():
             if path.is_file():
                 offline = offline.replace(f'href="{path.name}"', f'href="figures/world-rd-income/{folder}/{path.name}"')
     with ZipFile(destination / "world-rd-income.zip", "a", ZIP_DEFLATED) as archive:
         archive.writestr("world-rd-income/index.html", offline)
+        for name in dashboard_files:
+            if name == 'index.html':
+                continue
+            if name.endswith('.html'):
+                text = (destination / name).read_text('utf-8')
+                for folder in ('data', 'output'):
+                    for path in (ROOT / folder).iterdir():
+                        if path.is_file():
+                            text = text.replace(f'href="{path.name}"', f'href="figures/world-rd-income/{folder}/{path.name}"')
+                for path in ROOT.glob('*.md'):
+                    text = text.replace(f'href="{path.name}"', f'href="figures/world-rd-income/{path.name}"')
+                text = text.replace('<a href="world-rd-income.zip">Full reproducible research ZIP</a>', 'This extracted research archive')
+                archive.writestr('world-rd-income/' + name, text)
+            else:
+                archive.write(destination / name, 'world-rd-income/' + name)
     (destination / ".nojekyll").touch()
     print(f"Website ready: {destination / 'index.html'}")
 
