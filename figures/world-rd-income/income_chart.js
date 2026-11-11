@@ -9,7 +9,7 @@ window.IncomeChart=(()=>{
   function save(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
   function csv(rows,name){if(!rows.length)return;const keys=Object.keys(rows[0]),q=v=>'"'+String(v??'').replaceAll('"','""')+'"';save(new Blob(['\ufeff'+[keys,...rows.map(r=>keys.map(k=>r[k]))].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),name);}
   function render(input,shared){
-    $('income-inspector').textContent='Hover, focus or tap a bar for its values, sample and classification.';
+    $('income-inspector').textContent='Select a bar to see its value and the economies included.';
     data=input;const years=[+$('income-year-a').value,+$('income-year-b').value];
     if(years[0]===years[1])throw new Error('Choose two different comparison years.');
     const opts={years,vintage:shared.vintage,combine:shared.combine,ids:shared.ids,groups:shared.groups,
@@ -17,7 +17,7 @@ window.IncomeChart=(()=>{
     result=IncomeCore.aggregate(data,opts);
     const svg=node('svg',{id:'income-svg',xmlns:NS,width:1240,height:900,viewBox:'0 0 1240 900',role:'img','aria-label':'Four-panel income-group innovation comparison','font-family':'Arial, sans-serif'});
     svg.append(node('rect',{width:1240,height:900,fill:'white'}));
-    text(svg,28,32,'Innovation by World Bank income group',{'font-size':23,'font-weight':700});
+    text(svg,28,32,'R&D and innovation by income group',{'font-size':23,'font-weight':700});
     text(svg,28,58,`${years.join(' versus ')} · fixed ${shared.vintage==='current'?data.currentVintage:shared.vintage} classification · ${opts.sample==='paired'?'paired economy samples per indicator':'available economies in each year'}`);
     years.forEach((year,i)=>{svg.append(node('rect',{x:950+i*120,y:24,width:16,height:16,fill:colors[i]}));text(svg,974+i*120,38,year);});
     ['rd','researchers','patents','publications'].forEach((metric,p)=>{

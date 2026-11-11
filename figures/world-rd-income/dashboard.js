@@ -2,14 +2,14 @@
 window.Dashboard=(()=>{
   const $=id=>document.getElementById(id),defaults=['KOR','SGP','CHN','ES-PV','USA','GBR'];
   const views=[
-    ['snapshot','snapshot','Year snapshot','national','snapshot'],['compare','snapshot','Compare positions over time','national','compare'],['history','snapshot','Country history','national','history'],
-    ['income','income','Four-panel income-group comparison',null,null],
-    ['breakdown','national','Funding, performers & research types','national','breakdown'],['sector','national','Sector × scientific field','national','sector'],
-    ['research','rd','GVA & business R&D · economies, industries & years','research','comparison'],
-    ...[['comparison','Six-group shares · GVA, BERD & jobs'],['composition','R&D composition & allocation'],['intensity','Sector R&D / GVA'],['perWorker','R&D per employed person'],['productivity','R&D intensity versus productivity'],['trade','Manufacturing R&D & exports']].map(([k,t])=>['rd-'+k,'rd',t,'rd',k]),
-    ['gva','economy','Gross value added · six groups','gva','gva'],
-    ...[['employment','Employment by sector'],['comparison','GVA versus employment shares'],['sector','Productivity · sector panels'],['economy','Productivity · economy panels'],['exports','Goods-export composition']].map(([k,t])=>['economy-'+k,'economy',t,'economy',k]),
-    ['detail','data','Detailed industry & native-source tables','detail','detail'],['sources','data','Sources, downloads & provenance','sources','sources']
+    ['snapshot','snapshot','R&D expenditure and income','national','snapshot'],['compare','snapshot','Compare two years','national','compare'],['history','snapshot','Trends by economy','national','history'],
+    ['income','income','R&D and innovation by income group',null,null],
+    ['breakdown','national','R&D funding and performance','national','breakdown'],['sector','national','R&D by sector and field','national','sector'],
+    ['research','rd','Value added and business R&D','research','comparison'],
+    ...[['comparison','Sector shares: GVA, R&D and employment'],['composition','Business R&D by sector'],['intensity','Business R&D (% of sector GVA)'],['perWorker','Business R&D per worker'],['productivity','R&D intensity and productivity'],['trade','Manufacturing R&D and exports']].map(([k,t])=>['rd-'+k,'rd',t,'rd',k]),
+    ['gva','economy','Gross value added by sector','gva','gva'],
+    ...[['employment','Employment by sector'],['comparison','GVA and employment shares'],['sector','Productivity by sector'],['economy','Productivity by economy'],['exports','Goods exports by sector']].map(([k,t])=>['economy-'+k,'economy',t,'economy',k]),
+    ['detail','data','Industry data tables','detail','detail'],['sources','data','Definitions and sources','sources','sources']
   ];
   const files={national:'view-national.html',rd:'view-rd.html',gva:'view-gva.html',economy:'view-economy.html',research:'view-research.html',detail:'view-detail.html',sources:'view-sources.html'};
   let data=null,ids=[...defaults],frames=new Map(),request=0;
@@ -42,7 +42,7 @@ window.Dashboard=(()=>{
   }
   function frame(key){
     if(frames.has(key))return frames.get(key);
-    const iframe=document.createElement('iframe');iframe.title=key==='rd'?'Industry R&D charts':key==='research'?'Sixteen research-group comparisons':key+' data explorer';iframe.hidden=true;
+    const iframe=document.createElement('iframe');iframe.title=key==='rd'?'Industry R&D charts':key==='research'?'Comparisons by industry group':key+' data explorer';iframe.hidden=true;
     const promise=new Promise((resolve,reject)=>{iframe.onload=()=>resolve(iframe);iframe.onerror=()=>reject(new Error('Could not load '+files[key]));});
     iframe.src=files[key];$('view-host').append(iframe);const entry={iframe,promise};frames.set(key,entry);return entry;
   }
@@ -53,7 +53,7 @@ window.Dashboard=(()=>{
     const global=['snapshot','compare','income'].includes(id),hasYear=['snapshot','sector','research','gva','detail'].includes(id)||id.startsWith('rd-')||id.startsWith('economy-');
     $('scope-label').hidden=!global;$('shared-year-label').hidden=!hasYear;$('economy-settings').hidden=id==='sources';
     $('classification-control').hidden=!['rd','economy'].includes(section);$('industry-classification').value=id==='research'?'research':'six';
-    $('year-help').textContent=id==='income'?'Select two exact years below; income-group definitions and the economy sample are shared with the snapshot.':id==='sources'?'Source guides and downloads are available inside this dashboard.':hasYear?'Latest uses the newest usable observation for each economy; each actual year is shown. A fixed year never substitutes a nearby year.':'Use the year/window controls below. Your selected economies and income classification carry across views.';
+    $('year-help').textContent=id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
     history.replaceState(null,'','#'+id);
     try{
       const state=selection();

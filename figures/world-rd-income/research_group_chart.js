@@ -19,12 +19,12 @@ function usable(rows){if(!rows?.length)return false;const layout=$('research-lay
  return rows.some(r=>(layout!=='single'||r.group_id===$('research-group').value)&&r[metric]!=null);
 }
 function render(){
- $('research-detail').textContent='Hover, focus or tap a segment for coverage, source expressions and flags.';
+  $('research-detail').textContent='Select a bar to see its coverage and sources.';
  const layout=$('research-layout').value,paired=ResearchGroups.pairedLayouts.includes(layout),history=layout==='history',mode=$('research-measure').value,groups=paired?ResearchGroups.groups(data.groups,sector):data.groups;
  $('research-measure-label').hidden=!paired;$('research-sectors').hidden=!paired;$('research-history').hidden=!history;$('research-metric-label').hidden=paired||layout==='comparison';$('research-group-label').hidden=layout!=='single';$('research-changes-csv').hidden=!history;
  $('research-chart').classList.toggle('paired',paired);changes=[];
  const economy=$('research-economy'),previous=economy.value;economy.replaceChildren(...state.ids.map(iso=>new Option(state.names[iso]||iso,iso)));economy.value=state.ids.includes(previous)?previous:state.ids.includes('USA')?'USA':state.ids[0]||'';
- $('research-layout-help').textContent=history?'Choose three exact years below; displayed in chronological order. The shared reporting year does not apply here. Changes compare the earliest and latest selected years.':paired?'Ranked by GVA within each panel. Latest/common years require a GVA–BERD pair in at least one selected group; every actual year is labelled.':'Your original stacked shares and single-measure comparisons use all 16 groups. Whole-group ratios require complete same-year inputs.';
+  $('research-layout-help').textContent=history?'Years are shown in chronological order. Changes compare the first and last selected years; the year filter above does not apply.':paired?'Ranked by GVA in each panel. Latest and common years require both GVA and BERD for at least one selected industry.':'Choose an indicator to compare industries. Ratios are shown only where the whole group is covered.';
  if(history){const years=[...new Set(['a','b','c'].map(k=>+$('research-year-'+k).value))].sort((a,b)=>a-b);selected=economy.value?years.map(year=>({iso:economy.value,year,rows:byKey.get(economy.value+'/'+year)||[]})):[];}
  else selected=ResearchGroups.select(byKey,state.ids,state.year,paired?rows=>ResearchGroups.usable(rows,groups,mode):usable);
  selected=selected.map(a=>({...a,rows:a.rows.filter(r=>groups.some(g=>g.id===r.group_id))}));
@@ -34,8 +34,8 @@ function render(){
  $('research-metric').disabled=layout==='comparison';$('research-group').disabled=layout!=='single';
  const svg=n('svg',{xmlns:NS,width,height,viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':'Sixteen research group comparison','font-family':'Arial, sans-serif'});svg.append(n('rect',{width,height,fill:'white'}));
  const defs=n('defs'),pattern=n('pattern',{id:'research-partial',width:8,height:8,patternUnits:'userSpaceOnUse'});pattern.append(n('path',{d:'M0,8 L8,0',stroke:'white','stroke-width':2,'stroke-opacity':.65}));defs.append(pattern);svg.append(defs);
- txt(svg,24,32,'16 research groups · '+(layout==='comparison'?'GVA, BERD and employment shares':$('research-metric').selectedOptions[0].text),{'font-size':22,'font-weight':700});
- txt(svg,24,60,(state.year==='latest'?'Latest usable years':state.year==='common'?'Latest common usable year':'Reporting year '+state.year)+' · Hatched = partial coverage; missing is not zero.',{'font-size':14});
+  txt(svg,24,32,'16 industry groups · '+(layout==='comparison'?'GVA, BERD and employment shares':$('research-metric').selectedOptions[0].text),{'font-size':22,'font-weight':700});
+  txt(svg,24,60,(state.year==='latest'?'Latest available years':state.year==='common'?'Latest common year':'Reporting year '+state.year)+' · Hatched = partial coverage; — = missing.',{'font-size':14});
  if(layout==='comparison'){
   const left=65,top=130,h=410,w=1150,slot=w/Math.max(1,selected.length),bw=Math.min(44,slot*.25);
   for(let i=0;i<=4;i++){const y=top+h-i*h/4;svg.append(n('line',{x1:left,y1:y,x2:left+w,y2:y,stroke:'#dce5ea'}));txt(svg,left-10,y+4,i*25+'%',{'text-anchor':'end'});}
@@ -49,7 +49,7 @@ function render(){
   });
   data.groups.forEach((g,i)=>{svg.append(n('rect',{x:1255,y:110+i*42,width:13,height:13,fill:g.color}));const words=(g.id+' · '+g.label).split(' '),lines=[''];for(const word of words){if((lines.at(-1)+' '+word).length>43)lines.push(word);else lines[lines.length-1]+=(lines.at(-1)?' ':'')+word;}lines.forEach((line,j)=>txt(svg,1277,121+i*42+j*14,line,{'font-size':11}));});
   txt(svg,24,814,'Denominators differ: GVA and employment = A–T totals; BERD = reported industry R&D total, which can include U.',{'font-size':13});
-  txt(svg,24,838,'Grey = unallocated / reconciliation. Groups 14 and 15 cross the earlier KIS/LIS boundary; amounts are rebuilt from source cells.',{'font-size':13});
+  txt(svg,24,838,'Grey = unallocated / reconciliation. Groups 14 and 15 span KIS and LIS; values are calculated from original industry data.',{'font-size':13});
  }else{
   const groups=panels?data.groups:data.groups.filter(g=>g.id===$('research-group').value),columns=panels?4:1,pw=(width-40)/columns,ph=390;
   const factor=['berd_assigned_usd','gva_assigned_usd'].includes(metric)?1e9:metric==='employment_assigned_persons'?1e6:1;

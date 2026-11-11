@@ -10,13 +10,14 @@
 </head>
 <body><main>
 <p><a href="https://handysatria1.github.io/world-rd-income/#data-sources">← Back to the dashboard</a></p>
-<h1>Detailed data sources and provenance</h1>
-<p>This guide identifies the original providers, the specific datasets and tables used, and the transformations made by the <strong>Worldwide R&amp;D and income explorer</strong>. The analysis, harmonisation and visualisation are by Handy Satria; the underlying observations come from the official sources below.</p>
-<p class="metadata">Scientific build: <strong>__BUILD_UTC__</strong><br>Archived source retrieval dates (UTC): __RETRIEVAL_DATES__</p>
+<h1>Definitions and sources</h1>
+<p>Data providers, datasets and calculation methods for the national R&amp;D and income charts. Compiled and visualised by <strong>Handy Satria</strong>. Industry and income-group methods are linked below and under each chart.</p>
+<p class="metadata">Data build: <strong>__BUILD_UTC__</strong><br>Source retrieval dates (UTC): __RETRIEVAL_DATES__</p>
+<p><a href="INCOME_GROUPS.md">Income groups</a> · <a href="RESEARCH_GROUPS.md">16 industry groups</a> · <a href="RD_INDUSTRY.md">Business R&amp;D</a> · <a href="BROAD_SECTORS.md">Gross value added</a> · <a href="SECTOR_ECONOMY.md">Employment and trade</a> · <a href="INDUSTRY_DATA.md">Detailed industry data</a></p>
 <p><a href="source_inventory.csv" download>Download the complete source inventory (CSV)</a> · <a href="source_manifest.json" download>Download the exact provenance manifest (JSON)</a> · <a href="https://handysatria1.github.io/world-rd-income/world-rd-income.zip">Download the full research package and original responses</a></p>
-<nav aria-label="Source guide sections"><a href="#source-map">Which source feeds each view?</a><a href="#oecd">OECD</a><a href="#world-bank">World Bank</a><a href="#unesco">UNESCO UIS</a><a href="#eustat">Eustat</a><a href="#ons">ONS</a><a href="#transformations">Conversions and selection</a><a href="#inventory">Exact requests and checksums</a></nav>
+<nav aria-label="Source guide sections"><a href="#source-map">Sources by indicator</a><a href="#oecd">OECD</a><a href="#world-bank">World Bank</a><a href="#unesco">UNESCO UIS</a><a href="#eustat">Eustat</a><a href="#ons">ONS</a><a href="#transformations">Conversions and selection</a><a href="#inventory">Source requests and checksums</a></nav>
 
-<section id="source-map"><h2>1. Which sources feed the dashboard?</h2>
+<section id="source-map"><h2>1. Sources by indicator</h2>
 <div class="table-wrap"><table><thead><tr><th>Output or input</th><th>Official source</th><th>How it is used</th></tr></thead><tbody>
 <tr><td>Country R&amp;D intensity</td><td>OECD MSTI; UNESCO UIS disseminated through World Bank WDI</td><td>Reported GERD as a percentage of GDP; one provider per economy/window, selected by coverage.</td></tr>
 <tr><td>Country income and total GDP</td><td>World Bank WDI, source 2</td><td>GDP per person in current US$ and current international dollars (PPP); total current-US$ GDP for derived nominal R&amp;D.</td></tr>

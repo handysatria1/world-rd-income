@@ -76,7 +76,7 @@
     $("export-svg").hidden = true;
     $("sector-year-control").hidden = view !== "sector";
     $("gerd-basis-control").hidden = view !== "sector";
-    $("export").textContent = view === "sector" ? "Download selected cells CSV" : "Download plotted CSV";
+    $("export").textContent = "Download data (CSV)";
     $("history-button").hidden = ["history", "breakdown"].includes(view);
     $("history-button").disabled = !$("country").value;
     if(shared&&view==='snapshot'&&['latest','common'].includes(shared.year))$("rd-controls").hidden=true;
@@ -300,15 +300,15 @@
     const opts=result.opts, percentage=opts.chart.endsWith("share"), overlay=["funding_amount","performer_amount"].includes(opts.chart);
     $("chart-title").textContent=`${spec.title} · ${rdWindow(opts.rdStart,opts.rdEnd)}`;
     const basis=data.breakdowns.bases[opts.basis].label;
-    $("selection-description").textContent=`${basis} · ${percentage?(opts.shareMode==="annual"?"Mean annual shares":"Ratio of sums on common years"):"Mean annual expenditure, billions"}${result.kind==="research"?" · Performer: "+data.breakdowns.sectors[opts.sector]:""}.`;
-    stat("Selected economies",result.rows.length,$("stats"));stat("Bars with observations",result.rows.filter(r=>r.years.length).length,$("stats"));
-    stat("Full requested year coverage",result.rows.filter(r=>r.years.length===opts.rdEnd-opts.rdStart+1).length,$("stats"));
+    $("selection-description").textContent=`${basis} · ${percentage?(opts.shareMode==="annual"?"Average annual shares":"Shares of period totals"):"Average annual expenditure, billions"}${result.kind==="research"?" · Performing sector: "+data.breakdowns.sectors[opts.sector]:""}.`;
+    stat("Selected economies",result.rows.length,$("stats"));stat("With data",result.rows.filter(r=>r.years.length).length,$("stats"));
+    stat("All years available",result.rows.filter(r=>r.years.length===opts.rdEnd-opts.rdStart+1).length,$("stats"));
     $("legend").replaceChildren();$("legend").className="legend breakdown-legend";
     const codes=[...new Set(result.rows.flatMap(r=>r.parts.map(p=>p.code)))];
     for(const code of [...codes,"residual"]){const span=document.createElement("span"),swatch=document.createElement("i");swatch.style.background=breakdownColors[code]||"#d1d8df";span.append(swatch,document.createTextNode(breakdownLabels[code]||"Unallocated difference (derived)"));$("legend").appendChild(span);}
     if(overlay){const span=document.createElement("span");span.textContent="● R&D intensity · right axis";$("legend").appendChild(span);}
-    const width=Math.max(1000,result.rows.length*145+170), left=85,right=width-90,top=50,bottom=440;
-    const svg=element("svg",{class:"chart",viewBox:`0 0 ${width} 555`,role:"img","aria-label":$("chart-title").textContent,"font-family":"system-ui, sans-serif"},null,$("charts"));
+    const width=Math.max(1000,result.rows.length*145+170), left=85,right=width-90,top=40,bottom=315;
+    const svg=element("svg",{class:"chart",viewBox:`0 0 ${width} 420`,role:"img","aria-label":$("chart-title").textContent,"font-family":"system-ui, sans-serif"},null,$("charts"));
     const amounts=result.rows.map(r=>percentage?Math.max(100,r.parts.reduce((s,p)=>s+(p.share||0),0)):Math.max(r.total||0,r.parts.reduce((s,p)=>s+(p.amount||0),0))/1e9);
     const max=percentage?Math.max(100,...amounts)*1.04:Math.max(1,...amounts)*1.15, step=percentage?20:niceStep(max/5);
     const y=v=>bottom-v/max*(bottom-top);
@@ -352,9 +352,9 @@
       const lines=country.length<=18?[country]:[words.slice(0,Math.ceil(words.length/2)).join(" "),words.slice(Math.ceil(words.length/2)).join(" ")];
       lines.forEach((s,j)=>text(svg,x,bottom+27+j*17,s,{"text-anchor":"middle",fill:TEAL,"font-weight":400}));
       const yearLabel=r.years.length?(r.years.length===1?String(r.years[0]):`${r.years[0]}–${r.years.at(-1)}${r.years.at(-1)-r.years[0]+1===r.years.length?"":" · gaps"}`):"No eligible years";
-      text(svg,x,bottom+66,yearLabel,{"text-anchor":"middle","font-size":10});
-       if(r.years.length)text(svg,x,bottom+83,`${r.years.length}/${opts.rdEnd-opts.rdStart+1} years${r.missingCategories.length?" · partial categories":""}`,{"text-anchor":"middle","font-size":10});
-       if(result.kind==="research"&&r.country.iso==="ES-PV")text(svg,x,bottom+100,r.sector==="BES_PNP"?"Business + PNP · types unavailable":"Types unavailable; capital only",{"text-anchor":"middle","font-size":9});
+      text(svg,x,bottom+56,yearLabel,{"text-anchor":"middle","font-size":10});
+       if(r.years.length)text(svg,x,bottom+73,`${r.years.length}/${opts.rdEnd-opts.rdStart+1} years${r.missingCategories.length?" · partial categories":""}`,{"text-anchor":"middle","font-size":10});
+       if(result.kind==="research"&&r.country.iso==="ES-PV")text(svg,x,bottom+90,r.sector==="BES_PNP"?"Business + PNP · types unavailable":"Types unavailable; capital only",{"text-anchor":"middle","font-size":9});
     });
     const notes=result.rows.map(r=>`${names[r.country.iso]||r.country.name}: ${r.reason||("years "+r.years.join(", "))}${r.missingCategories.length?"; unreported/unusable categories: "+r.missingCategories.map(c=>breakdownLabels[c]).join(", "):""}${r.residual!==null&&Math.abs(r.residual)>1?"; signed total-minus-components difference "+fmt(r.residual,0)+" units":""}.`);
     if(overlay)for(const r of result.rows)if(r.years.length&&r.intensity===null)notes.push(`${names[r.country.iso]||r.country.name}: intensity omitted; missing matching intensity years ${r.years.filter(y=>!r.intensityYears.includes(y)).join(", ")} (${r.intensitySource}).`);
@@ -364,8 +364,8 @@
     if(overlay&&result.rows.some(r=>r.intensitySource.startsWith("ONS")))notes.push("UK intensity: one ONS provider across the bar years, with indicative 2018–2021 values from the 2023 publication and 2022–2024 from the 2024 publication; GDP/methodology vintage break at 2022.");
     notes.push(`Expenditure: OECD RDS / Eustat / ONS. Intensity: OECD MSTI / WDI / Eustat / ONS, potentially different vintages. Build: ${data.builtUTC}.`);
     $("coverage-note").textContent=notes.join("\n");$("coverage-note").className="metadata breakdown-note";
-    $("inspector").textContent="Select a segment or intensity marker for details. All segments in a bar share the displayed years; grey is an accounting gap, not an assigned funding/research category.";
-    $("percentage-note").textContent=`${opts.showPercentages?"Segment labels show percentages where space permits.":"Segment percentage labels are hidden."} ${percentage&&opts.shareMode==="annual"?"Percentages are mean annual shares.":"Percentages are each category's share of the reported mean total."} Small segments: hover or open “All sector percentages and plotted data” below. Grey is a derived accounting difference.`;
+    $("inspector").textContent="Select a bar segment or R&D intensity marker to see its values and sources.";
+    $("percentage-note").textContent=`${percentage&&opts.shareMode==="annual"?"Average annual shares.":"Shares of the reported period total."} ${opts.showPercentages?"Small segments are labelled in the data table.":"Percentage labels are hidden."} Grey shows the difference between the reported total and known categories.`;
     const rows=window.RDBreakdowns.exportRows(data,result);
     table(rows,[{key:"economy",label:"Economy"},{key:"category",label:result.performers?"Performing sector":result.kind==="funding"?"Funding source":"Research type / capital"},{key:"years_used",label:"Years used"},{key:"mean_annual_amount",label:"Mean annual amount (units)",format:v=>fmt(v,1)},{key:"share_percent",label:"Share (%)",format:v=>fmt(v,3)},{key:"intensity_percent_gdp",label:"Intensity (%)",format:v=>fmt(v,3)}],$("data-table"));
     $("table-description").textContent="All reported category percentages, including segments too small to label. CSV includes annual input cells, totals, flags, conversions and source URLs. Missing categories remain blank, not zero.";
@@ -378,14 +378,14 @@
   function breakdownDashboard(opts) {
     core.checkYears(data,opts.rdStart,opts.rdEnd);
     const specs=[
-      {id:"funding_amount",chart:"funding_amount",title:"Who funds R&D? Amounts + intensity"},
-      {id:"funding_share",chart:"funding_share",title:"Who funds R&D? Sector percentages"},
-      {id:"performer_amount",chart:"performer_amount",title:"Who performs R&D? Amounts + intensity"},
-      {id:"performer_share",chart:"performer_share",title:"Who performs R&D? Sector percentages"},
-      {id:"research_gov_share",chart:"research_share",sector:"GOV",title:"Government-performed R&D · research-type percentages"},
-      {id:"research_business_share",chart:"research_share",sector:"BES",title:"Business-performed R&D · research-type percentages"},
-      {id:"research_gov_amount",chart:"research_amount",sector:"GOV",title:"Government-performed R&D · research-type amounts"},
-      {id:"research_business_amount",chart:"research_amount",sector:"BES",title:"Business-performed R&D · research-type amounts"}
+      {id:"funding_amount",chart:"funding_amount",title:"R&D expenditure by funding source"},
+      {id:"funding_share",chart:"funding_share",title:"R&D funding by source (%)"},
+      {id:"performer_amount",chart:"performer_amount",title:"R&D expenditure by performing sector"},
+      {id:"performer_share",chart:"performer_share",title:"R&D by performing sector (%)"},
+      {id:"research_gov_share",chart:"research_share",sector:"GOV",title:"Government R&D by research type (%)"},
+      {id:"research_business_share",chart:"research_share",sector:"BES",title:"Business R&D by research type (%)"},
+      {id:"research_gov_amount",chart:"research_amount",sector:"GOV",title:"Government R&D expenditure by research type"},
+      {id:"research_business_amount",chart:"research_amount",sector:"BES",title:"Business R&D expenditure by research type"}
     ];
     const extra=$("breakdownSector").value;
     if(extra)for(const mode of ["share","amount"])specs.push({id:`research_${extra}_${mode}`,chart:`research_${mode}`,sector:extra,
@@ -434,7 +434,7 @@
   function render() {
     layoutControls();$("error").hidden=true;$("tooltip").hidden=true;$("stats").replaceChildren();$("charts").replaceChildren();
     $("breakdown-panels").replaceChildren();
-    $("inspector").textContent="Hover over or click a point to inspect its values, reporting years and source.";
+    $("inspector").textContent="Select a point to see its value, year and source.";
     const opts=options();
     try {
       if(shared&&['history','sector'].includes(view)&&!$('country').value)throw new Error('Select an economy above to display this view.');
@@ -453,7 +453,7 @@
       } else if(view==="sector") {
         current=core.sectorField(data,$("country").value,+$("sectorYear").value,$("gerdBasis").value);
         const dataset=data.sectorField, currencies=[...new Set(current.rows.map(r=>r.currency_code).filter(Boolean))], bases=[...new Set(current.rows.map(r=>r.base_year).filter(Boolean))];
-        $("chart-title").textContent=`${current.country.name} · GERD by sector × field · ${current.year}`;
+        $("chart-title").textContent=`${current.country.name} · R&D by sector and field · ${current.year}`;
         $("selection-description").textContent=`${dataset.bases[current.basis].label} · matrix in millions · currency: ${currencies.join(", ")||"no source rows"}${bases.length?" · base year: "+bases.join(", "):""}.`;
         if(current.country.geographyType==="region")$("selection-description").textContent+=current.basis==="USD_PPP_V"?" Derived from EUR using Spain's national GDP-PPP proxy.":current.basis==="USD_V"?" Derived from EUR using the same-year official exchange rate.":current.basis==="XDC_V"?" Reported Eustat expenditure in EUR.":" No Basque constant-price series is supplied.";
         stat("Available cells",current.available);stat("Source cells returned",current.sourceCells);stat("Confidential cells",current.rows.filter(r=>r.availability==="confidential_or_restricted").length);
@@ -492,9 +492,9 @@
         const sample=shared?{...data,countries:data.countries.filter(c=>shared.ids.includes(c.iso))}:data;
         current=view==="compare"?core.comparison(sample,opts):shared&&['latest','common'].includes(shared.year)?core.latestSnapshot(sample,opts,shared.year==='common'):core.snapshot(sample,opts);
         const fitRows=core.regressionRows(current.rows),endFit=core.ols(fitRows.map(r=>({x:r.end[opts.metric],y:r.end.rd.value})));
-        $("chart-title").textContent=view==="compare"?`Country positions · ${opts.from} → ${opts.to}`:`R&D intensity and income · GDP ${opts.gdpYear}`;
+        $("chart-title").textContent=view==="compare"?`R&D expenditure and income · ${opts.from}–${opts.to}`:`R&D expenditure and income · GDP ${opts.gdpYear}`;
         $("selection-description").textContent=view==="compare"?`Earlier R&D: ${rdWindow(current.earlyStart,current.earlyEnd)} · Later R&D: ${rdWindow(opts.rdStart,opts.rdEnd)} · ${opts.timing==="fixed"?"R&D held fixed; horizontal movement only":"R&D window shifts with GDP year"}.`:`R&D ${rdWindow(opts.rdStart,opts.rdEnd)} · ${opts.strict?"Every requested R&D year required":"Mean of reported R&D years"} · ${unit()}.`;
-        if(current.latest){$('chart-title').textContent='R&D intensity and income · '+(current.common?'latest common usable year':'latest usable year per economy');$('selection-description').textContent='Each point uses R&D and both income measures from the same actual year, shown in its tooltip and table. '+(current.common?'Common year: '+(current.commonYear??'none')+'.':'Reporting years differ between economies.');}
+        if(current.latest){$('chart-title').textContent='R&D expenditure and income · '+(current.common?'latest common year':'latest available');$('selection-description').textContent='R&D expenditure (% of GDP) and GDP per capita use the same year for each economy. '+(current.common?'Common year: '+(current.commonYear??'none')+'.':'Reporting years vary by economy; select a point for details.');}
         stat(view==="compare"?"Economies at both endpoints":"Economies plotted",current.rows.length);
         stat("Complete R&D coverage",current.rows.filter(r=>r.end.rd.complete&&(!r.start||r.start.rd.complete)).length);
         stat("Economies in regression",fitRows.length);

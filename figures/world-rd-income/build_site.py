@@ -181,7 +181,7 @@ def build_site(destination: Path) -> None:
         '<details><summary>Example stacked charts · 2020–2024</summary><p>' + '<br>'.join(chart_links) + '</p></details>'
     ))
     dashboard_files = build_dashboard(destination)
-    offline = (destination / 'index.html').read_text('utf-8').replace('<a href="world-rd-income.zip" download>Download research archive ↓</a>', 'Research archive · extracted copy')
+    offline = (destination / 'index.html').read_text('utf-8').replace('<a href="world-rd-income.zip" download>Download data and code (ZIP)</a>', 'Data and code · extracted archive')
     for folder in ("data", "output"):
         for path in (ROOT / folder).iterdir():
             if path.is_file():

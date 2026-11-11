@@ -1,6 +1,6 @@
 'use strict';
 const ResearchCompare=(()=>{
-  const labels={economies:'Compare economies · industries ranked by GVA',industries:'Compare industries · economies ranked by GVA',history:'Compare years · industries ranked by GVA'};
+  const labels={economies:'Value added and business R&D by economy',industries:'Value added and business R&D by industry',history:'Value added and business R&D over time'};
   const number=v=>v===0?'0':Math.abs(v)<.01?v.toExponential(1):Number(v).toLocaleString('en',{maximumFractionDigits:2});
   function render({data,state,selected,groups,layout,mode,sector,host,n,txt,drawBar,inspect}){
     const measures=ResearchGroups.measures(mode),width=Math.max(560,Math.min(1500,host.clientWidth)),columns=width>=1100?2:1,pw=(width-40)/columns;
@@ -18,7 +18,7 @@ const ResearchCompare=(()=>{
     txt(svg,20,30,labels[layout],{'font-size':20,'font-weight':700});
     txt(svg,20,55,(sector==='all'?'All 16 groups':sector)+' · '+(mode==='share'?'% of each metric’s total':'Current US$ billion'),{'font-size':14});
     measures.forEach((m,i)=>{svg.append(n('rect',{x:20+i*115,y:72,width:16,height:12,fill:m.color}));txt(svg,42+i*115,83,m.label,{'font-size':12});});
-    lines(20,108,'Each panel has its own scale. Paired bars share a scale. Hatching = partial; — = missing; 0 = reported zero.',width-40,12,'#526777');
+    lines(20,108,'Ranked by GVA. Scales vary by panel. Hatching = partial coverage; — = missing; 0 = reported zero.',width-40,12,'#526777');
     if(!panels.length)txt(svg,20,180,'Choose at least one economy in the shared controls.');
     panels.forEach((panel,p)=>{
       const x=20+p%columns*pw,y=145+Math.floor(p/columns)*ph,left=x+labelWidth,w=pw-labelWidth-70;
@@ -48,7 +48,7 @@ const ResearchCompare=(()=>{
     if(history&&selected.length===1)txt(svg,20,plotBottom+25,'Choose at least two distinct years to calculate endpoint changes.');
     if(history&&selected.length>1){
       const first=selected[0],last=selected.at(-1),start=plotBottom+20,changeUnit=mode==='share'?'percentage points':'% change in current US$';
-      txt(svg,20,start,`${first.year} → ${last.year} · endpoint changes`,{'font-size':18,'font-weight':700});
+      txt(svg,20,start,`Change from ${first.year} to ${last.year}`,{'font-size':18,'font-weight':700});
       lines(20,start+23,mode==='share'?'Last share − first share, in percentage points. Same total denominators as the bars above.':'(Last − first) / first × 100. Nominal US$ changes include prices and exchange rates; they are not real growth.',width-40,12,'#526777');
       const ranked=ResearchGroups.rank(groups.map(g=>({g,row:last.rows.find(r=>r.group_id===g.id)})),measures[0].key);
       measures.forEach((m,p)=>{

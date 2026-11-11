@@ -25,7 +25,7 @@ function render(){
   const defs=node("defs"),pattern=node("pattern",{id:"partial",width:8,height:8,patternUnits:"userSpaceOnUse"});pattern.append(node("path",{d:"M-2,2 L2,-2 M0,8 L8,0 M6,10 L10,6",stroke:"white","stroke-opacity":.55,"stroke-width":2}));defs.append(pattern);svg.append(defs);
   text(svg,24,34,el("title-input").value,{"font-size":22,"font-weight":700});
   const units=horizontal?'GVA: % of A–T total · BERD: % of reported industry R&D total':kind==="intensity"?"BERD / whole-sector GVA (%) · complete groups only":kind==="perWorker"?"current US$ per whole-sector employed person · complete groups only":kind==="productivity"?data.groups[group].label+" · complete R&D group only":kind==="trade"?"R&D share of reported BERD versus export share of all goods (%)":kind==="comparison"?"R&D / GVA / employment: each uses its own total denominator (%)":unit==="share"?"share of reported industry R&D total (%)":"current US$ billion";
-  text(svg,24,60,(mode==="latest"?"Latest usable years":mode==="common"?"Latest common usable year":"Reporting year: "+mode)+" · "+units,{fill:"#526777"});
+  text(svg,24,60,(mode==="latest"?"Latest available years":mode==="common"?"Latest common year":"Reporting year: "+mode)+" · "+units,{fill:"#526777"});
   if(horizontal){
     const left=235,top=115,w=970;
     for(let k=0;k<=4;k++){const x=left+w*k/4;line(svg,x,top-15,x,top+current.length*106-10);text(svg,x,top-26,k*25+'%',{'text-anchor':'middle','font-size':12});}
@@ -82,7 +82,7 @@ function render(){
   text(svg,24,height-29,kind==="trade"?"MHT: C20,21,26–30. LMT: C10–19,22–25,31–33; goods exports exclude C33. Different denominators; no export/R&D ratio.":"Unallocated is not Other production. Missing is not zero. Complete-group ratios use exact economy/year/group joins.",{"font-size":12,fill:"#526777"});
   el("chart").replaceChildren(svg);
   const good=current.filter(a=>a.available),years=[...new Set(current.filter(a=>a.row).map(a=>a.year))].sort();
-  el("status").textContent=`${good.length} of ${selected.length} economies meet this chart’s R&D data requirements. `+(years.length?"Selected year(s): "+years.join(", ")+". ":"")+(years.length>1?"Different reporting years are shown. ":"")+"Partial groups are never used as full-group ratios.";
+  el("status").textContent=`R&D data available for ${good.length} of ${selected.length} economies. `+(years.length?"Reporting years: "+years.join(", ")+". ":"")+"Ratios require complete sector coverage.";
   const notes=current.filter(a=>!a.available||a.row?.classifiedShare<99.999).map(a=>countries.get(a.iso).display+": "+(!a.available?short(a.reason)+"; required R&D data unavailable":fmt(a.row.classifiedShare)+"% assigned; "+short(a.row.status)));
   el("missing").hidden=!notes.length;el("missing").textContent=notes.join("; ");const drawable=horizontal?current.some(a=>a.row?.stackAvailable||a.row?.gvaShares.every(RDIndustry.finite)):good.length;for(const id of["svg","png","print"])el(id).disabled=!drawable;el("csv").disabled=!current.some(a=>a.row);table();nativeTable();
 }
