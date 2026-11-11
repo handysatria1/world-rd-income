@@ -27,6 +27,18 @@ The default paired sample requires an observation at both requested years, separ
 
 The plotted CSV contains statistics, method, sample, classification vintage and membership. The input export records country values, flags, exclusion reasons, exact source response and 1-based record. Annual missing rows are retained in `innovation_annual.csv`. No nearest-year substitution is made.
 
+## Country-level indicators
+
+Under **Innovation**, choose **Researchers by economy**, **Patent applications by economy** or **Journal articles by economy**. These views use the shared selection of up to 16 economies, in the selected order, and the shared income-group filter. Each row is an individual observation, without group aggregation. Researchers are expressed as full-time-equivalent researchers per million people, not total headcount. Patent applicants can be residents, nonresidents, or their derived office total.
+
+- **Exact year:** use that year's observation only, retaining missing values.
+- **Latest available:** choose the most recent nonmissing observation separately for each economy and selected indicator/patent definition, within the archived 2000–2025 series. Actual years appear beside every value.
+- **Latest common year:** choose the most recent year with a nonmissing observation for every selected economy. No economy is silently dropped. If the selection has no common year, all rows remain missing and the reason is shown. Basque Country has no separate observations in these WDI series, so including it prevents a common-year comparison.
+
+Zero is a valid observation in all modes. A derived patent total requires both resident and nonresident observations in the same year, including when choosing latest/common years. Income classification affects labels and filters, not the reported country values.
+
+Country charts export SVG, PNG and CSV. The CSV retains missing rows, requested and actual years, latest available year, units, classification vintage, indicator codes, source files and 1-based records, component values (in indicator order), flags, notes, source URLs, update/retrieval dates and dataset build time. Patent totals identify both source components. The expandable data table and definitions show the selected indicator's metadata.
+
 ## Rebuild
 
 Run `income_sources.py` (checksum-reuses archives), then `income_data.py`. Use `--refresh` only when deliberately changing the source vintage. `build_site.py` packages these outputs into the unified dashboard. The full dashboard uses lazy-loaded local resources; after extracting the research ZIP, serve its root with `python -m http.server` and open the localhost address. Original self-contained national/sector pages remain in the archive.

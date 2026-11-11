@@ -3,6 +3,7 @@ window.Dashboard=(()=>{
   const $=id=>document.getElementById(id),defaults=['KOR','SGP','CHN','ES-PV','USA','GBR'];
   const views=[
     ['snapshot','snapshot','R&D expenditure and income','national','snapshot'],['compare','snapshot','Compare two years','national','compare'],['history','snapshot','Trends by economy','national','history'],
+    ['researchers','income','Researchers by economy',null,'researchers'],['patents','income','Patent applications by economy',null,'patents'],['publications','income','Journal articles by economy',null,'publications'],
     ['income','income','R&D and innovation by income group',null,null],
     ['breakdown','national','R&D funding and performance','national','breakdown'],['sector','national','R&D by sector and field','national','sector'],
     ['research','rd','Value added and business R&D','research','comparison'],
@@ -49,15 +50,17 @@ window.Dashboard=(()=>{
   async function update(){
     if(!data)return;const token=++request,view=views.find(v=>v[0]===$('view').value),[id,section,,key]=view;
     $('dashboard-error').hidden=true;$('loading').hidden=true;for(const {iframe}of frames.values())iframe.hidden=true;
-    $('income-panel').hidden=id!=='income';document.querySelectorAll('[data-section]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.section===section));
-    const global=['snapshot','compare','income'].includes(id),hasYear=['snapshot','sector','research','gva','detail'].includes(id)||id.startsWith('rd-')||id.startsWith('economy-');
+    const innovation=['researchers','patents','publications'].includes(id);
+    $('income-panel').hidden=id!=='income';$('innovation-panel').hidden=!innovation;document.querySelectorAll('[data-section]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.section===section));
+    const global=['snapshot','compare','income'].includes(id),hasYear=innovation||['snapshot','sector','research','gva','detail'].includes(id)||id.startsWith('rd-')||id.startsWith('economy-');
     $('scope-label').hidden=!global;$('shared-year-label').hidden=!hasYear;$('economy-settings').hidden=id==='sources';
     $('classification-control').hidden=!['rd','economy'].includes(section);$('industry-classification').value=id==='research'?'research':'six';
-    $('year-help').textContent=id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
+    $('year-help').textContent=innovation?'Compare selected economies. Latest available uses each economy’s latest observation; latest common year requires data for every selected economy. Choose an exact year for a fixed-year comparison.':id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
     history.replaceState(null,'','#'+id);
     try{
       const state=selection();
       if(id==='income'){IncomeChart.render(data,state);return;}
+      if(innovation){InnovationChart.render(data,state);return;}
       const entry=frame(key);$('loading').hidden=false;const iframe=await entry.promise;
       if(token!==request)return;
       iframe.hidden=false;
@@ -70,15 +73,15 @@ window.Dashboard=(()=>{
   function navigate(id){if(!views.some(v=>v[0]===id))id='snapshot';$('view').value=id;update();}
   async function initialize(){
     try{const response=await fetch('income_explorer.json');if(!response.ok)throw new Error('Income dataset unavailable ('+response.status+').');data=await response.json();
-      const sections={snapshot:'Income & R&D',income:'Income groups',national:'National R&D',rd:'Industry R&D',economy:'Economy & trade',data:'Data & sources'};
+      const sections={snapshot:'Income & R&D',income:'Innovation',national:'National R&D',rd:'Industry R&D',economy:'Economy & trade',data:'Data & sources'};
       for(const [key,label]of Object.entries(sections)){const g=document.createElement('optgroup');g.label=label;for(const v of views.filter(v=>v[1]===key))g.append(new Option(v[2],v[0]));$('view').append(g);}
       for(let year=2025;year>=2000;year--)$('shared-year').add(new Option(year,year));
       $('income-vintage').add(new Option('Current · '+data.currentVintage,'current'));for(const fy of data.historicalVintages)$('income-vintage').add(new Option(fy+' · fixed membership',fy));
-      IncomeChart.initialize(data);chips();
+      IncomeChart.initialize(data);InnovationChart.initialize();chips();
       for(const id of ['view','shared-year','sample-scope'])$(id).addEventListener('change',update);
       $('industry-classification').onchange=()=>navigate($('industry-classification').value==='research'?'research':'rd-comparison');
       for(const id of ['income-vintage','income-filter','combine-middle'])$(id).addEventListener('change',()=>{chips();update();});
-      for(const id of ['income-year-a','income-year-b','income-stat','income-sample','patent-mode'])$(id).addEventListener('change',update);
+      for(const id of ['income-year-a','income-year-b','income-stat','income-sample','patent-mode','innovation-patent-mode'])$(id).addEventListener('change',update);
       $('economy-search').oninput=choices;$('example-economies').onclick=()=>{ids=[...defaults];chips();update();};$('clear-economies').onclick=()=>{ids=[];chips();update();};
       $('use-selection').onclick=()=>{$('sample-scope').value='selected';update();};
       document.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(views.find(v=>v[1]===b.dataset.section)[0]));

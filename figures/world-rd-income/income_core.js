@@ -16,6 +16,32 @@
     }
     return country.series[metric==='patents'&&patentMode==='nonresident'?'patentsNonresident':metric]?.[year]?.v??null;
   }
+  function countryObservations(data,opts){
+    const byISO=new Map(data.countries.map(c=>[c.iso,c]));
+    const countries=(opts.ids??data.countries.map(c=>c.iso)).map(iso=>byISO.get(iso)).filter(Boolean);
+    const metric=opts.metric,patents=opts.patents||'resident',requested=String(opts.year);
+    const keys=metric==='patents'?(patents==='total'?['patents','patentsNonresident']:[patents==='nonresident'?'patentsNonresident':'patents']):[metric];
+    const available=c=>[...new Set(keys.flatMap(k=>Object.keys(c.series[k]||{})))].map(Number).filter(y=>value(c,metric,y,patents)!=null).sort((a,b)=>b-a);
+    const years=countries.map(available);
+    const commonYear=years[0]?.find(y=>countries.every(c=>value(c,metric,y,patents)!=null))??null;
+    const rows=countries.map((c,i)=>{
+      const year=requested==='latest'?(years[i][0]??null):requested==='common'?commonYear:+requested;
+      const v=year==null?null:value(c,metric,year,patents),classification=classify(data,c.iso,opts.vintage,opts.combine);
+      const cells=keys.map(k=>year==null?null:c.series[k]?.[year]);
+      const missing=v!=null?'':requested==='common'?'No common year for all selected economies':year==null?'No observations in 2000–2025':'No observation in exact year';
+      return {iso:c.iso,economy:c.name,geography_type:c.region?'region':'economy',metric,requested_year:requested,year,value:v,
+        unit:data.indicators[metric].unit,availability:v==null?'missing':'available',missing_reason:missing,
+        latest_available_year:years[i][0]??null,patent_definition:metric==='patents'?patents:'',
+        method:metric==='patents'&&patents==='total'?'derived resident + nonresident':'reported WDI value',
+        classification:classification.vintage,group_label:classification.label,
+        indicator:keys.map(k=>data.indicators[k].code).join(' + '),source_file:keys.map(k=>k+'.json').join(';'),
+        source_record:cells.map(cell=>cell?.record??'not returned').join(';'),source_values:cells.map(cell=>cell?.v??'missing').join(';'),
+        flags:cells.map(cell=>cell?.flags||'').join(';'),notes:cells.map(cell=>cell?.note||'').join(';'),
+        source_url:keys.map(k=>data.indicators[k].url||'').join(';'),source_organization:keys.map(k=>data.indicators[k].organization||'').join(';'),
+        api_lastupdated:keys.map(k=>data.indicators[k].updated||'').join(';'),retrieved_utc:keys.map(k=>data.indicators[k].retrieved||'').join(';'),built_utc:data.builtUTC||''};
+    });
+    return {rows,commonYear,metric};
+  }
   function aggregate(data,opts){
     const codes=opts.combine?['HIC','MIC','LIC']:['HIC','UMC','LMC','LIC'];
     const rows=[],audit=[];
@@ -45,6 +71,6 @@
     }
     return {rows,audit};
   }
-  const api={labels,symbols,classify,value,aggregate};
+  const api={labels,symbols,classify,value,aggregate,countryObservations};
   if(typeof module!=='undefined')module.exports=api;else root.IncomeCore=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
