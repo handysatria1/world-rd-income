@@ -66,7 +66,13 @@ jobs:
           python verify_breakdown.py
           node test_breakdown.js --built
       - name: Prepare website and reproducible download
-        run: python build_site.py --destination "$GITHUB_WORKSPACE/_site"
+        # The supplement has a separate retrieval manifest and build timestamp.
+        # It is joined to this run's validated R&D/income build.
+        run: |
+          python industry_sources.py --refresh
+          python industry_data.py
+          python verify_industry.py
+          python build_site.py --destination "$GITHUB_WORKSPACE/_site"
       - name: Add current results to run summary
         run: cat data/current_results.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload validated website

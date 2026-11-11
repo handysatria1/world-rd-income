@@ -12,6 +12,7 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from source_guide import build_source_guide
+from industry_site import build_industry_site, DOWNLOADS as INDUSTRY_DOWNLOADS
 
 ROOT = Path(__file__).resolve().parent
 
@@ -41,6 +42,7 @@ def build_site(destination: Path) -> None:
     if any(destination.iterdir()):
         raise ValueError(f"Use an empty site destination: {destination}")
     build_source_guide(destination, report["built_utc"])
+    build_industry_site(destination, report["built_utc"])
 
     # Explicit package directories avoid publishing unrelated workspace material.
     files = [ROOT / name for name in (
@@ -48,6 +50,7 @@ def build_site(destination: Path) -> None:
         "requirements.txt", "README.md", "AUTOMATION.md", "OFFICIAL_DATA.md", "historical_explorer.py",
         "CITATION.cff", "CITATION.bib",
         "source_guide.py", "data_sources.html",
+        "industry_sources.py", "industry_data.py", "verify_industry.py", "industry_site.py", "industry.html", "INDUSTRY_DATA.md",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
         "nominal_rd.py", "test_nominal_rd.py",
         "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",
@@ -62,8 +65,17 @@ def build_site(destination: Path) -> None:
             archive.write(path, "world-rd-income/figures/world-rd-income/" + path.relative_to(ROOT).as_posix())
         for name in ("CITATION.cff", "CITATION.bib"):
             archive.write(ROOT / name, "world-rd-income/" + name)
-        for name in ("sources.html", "source_inventory.csv", "source_manifest.json"):
+        for name in ("sources.html", "source_inventory.csv", "source_manifest.json",
+                     "industry_source_inventory.csv", "industry_source_manifest.json"):
             archive.write(destination / name, "world-rd-income/" + name)
+        # Keep the supplement's downloaded-data links usable after extracting the research ZIP.
+        offline = (destination / "industry.html").read_text("utf-8")
+        for name in INDUSTRY_DOWNLOADS:
+            offline = offline.replace(f'href="{name}"', f'href="figures/world-rd-income/data/{name}"')
+        offline = offline.replace('href="INDUSTRY_DATA.md"', 'href="figures/world-rd-income/INDUSTRY_DATA.md"')
+        offline = offline.replace('href="index.html"', 'href="figures/world-rd-income/output/world_rd_income_explorer.html"')
+        offline = offline.replace('<a href="world-rd-income.zip">Full reproducible research ZIP</a>', 'Full research package: this extracted directory')
+        archive.writestr("world-rd-income/industry.html", offline)
         for name in ("update-world-rd-income.yml", "publish-world-rd-snapshot.yml"):
             workflow = ROOT.parents[1] / ".github" / "workflows" / name
             if workflow.exists():
@@ -90,6 +102,9 @@ def build_site(destination: Path) -> None:
             links.append(f'<a href="{filename}">{extension.upper()}</a>')
         chart_links.append(title + ": " + " / ".join(links))
     document = document.replace(marker, (
+        '<p><strong>New: <a href="industry.html">Medium/high-tech exports and ISIC two-digit value added</a></strong> · '
+        '<a href="industry_exports_gva.xlsx">Companion Excel workbook</a> · '
+        '<a href="industry_country_coverage.csv">Country coverage</a></p>'
         '<p><a href="sources.html">Detailed data sources, exact requests and provenance</a> · '
         '<a href="source_inventory.csv">Source inventory (CSV)</a> · '
         '<a href="source_manifest.json">Original provenance manifest (JSON)</a></p>'

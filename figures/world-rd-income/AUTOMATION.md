@@ -2,6 +2,8 @@
 
 The supplied workflow checks OECD, World Bank, UNESCO UIS, Eustat and the reviewed ONS editions **every Monday at 06:23 UTC**. Each successful run downloads current responses, recalculates all figures and publishes the interactive chart through GitHub Pages. You can also run it manually. This is scheduled polling: a source change appears after the next successful run, rather than immediately when the provider updates its database.
 
+The workflow also refreshes the separately versioned [export technology and detailed value-added supplement](INDUSTRY_DATA.md), including UNIDO INDSTAT. It runs `industry_sources.py --refresh`, `industry_data.py` and `verify_industry.py` before packaging. The supplement joins to that run's validated R&D/income history and retains a separate source manifest and build timestamp.
+
 Project website: **https://handysatria1.github.io/world-rd-income/**. Source repository and archived releases: **https://github.com/handysatria1/world-rd-income**.
 
 ## 1. Upload the source files
@@ -48,6 +50,12 @@ figures/
     CITATION.bib
     source_guide.py
     data_sources.html
+    industry_sources.py
+    industry_data.py
+    verify_industry.py
+    industry_site.py
+    industry.html
+    INDUSTRY_DATA.md
 ```
 
 The workflow is at [../../.github/workflows/update-world-rd-income.yml](../../.github/workflows/update-world-rd-income.yml) in this workspace. On GitHub's website, use **Add file → Create new file**, enter that exact `.github/workflows/update-world-rd-income.yml` path, paste its contents, and commit. Upload all source files shown under `figures/world-rd-income/` without flattening the folders. The public repository tracks source files; large generated `data/`, `output/` and `_site/` files are delivered through Pages and release assets. The refresh workflow generates them from fresh downloads.

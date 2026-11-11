@@ -326,3 +326,6 @@ New deliverables:
 - `output/rd_research_type_composition_2020_2024.{png,svg,pdf}`.
 
 Additional validation commands (after rebuilding): `python verify_breakdown.py` and `node test_breakdown.js --built`. The former independently checks all raw cells, conversions, flags, coverage, reconciliation, embedded HTML and new workbook sheets. The latter tests common-year/missingness edge cases and independently compares JavaScript results with Python figure calculations. Packaging requires the matching successful verification report.
+## Export technology and ISIC two-digit value-added supplement
+
+See [INDUSTRY_DATA.md](INDUSTRY_DATA.md) for the separately versioned World Bank/UNIDO export percentages and OECD/UNIDO value-added data. The companion workbook, annual joins, country/year coverage, original responses and exact requests are included in research downloads. Run `industry_sources.py`, `industry_data.py` and `verify_industry.py` after the main scientific build and before `build_site.py`. The supplement's interactive page is `industry.html`.

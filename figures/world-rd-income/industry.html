@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Export technology & detailed value added · Handy Satria</title>
+<style>
+:root{color-scheme:light;--ink:#172f42;--accent:#006c75}*{box-sizing:border-box}body{font:16px/1.55 system-ui,sans-serif;color:var(--ink);background:#f3f6f8;margin:0}main{max-width:1250px;margin:auto;padding:30px 22px 60px}h1{font-size:2.2rem;line-height:1.2}h2{margin-top:0}a{color:var(--accent)}.card{background:white;border:1px solid #d4dee5;border-radius:12px;padding:24px;margin:20px 0}.stats,.controls{display:flex;flex-wrap:wrap;gap:20px}.stats>div{flex:1;min-width:180px}.stats strong{display:block;font-size:1.7rem}.muted{color:#566a78}.controls label{display:flex;flex-direction:column;gap:6px}select,input{font:inherit;padding:8px;border:1px solid #97a8b5;border-radius:5px;max-width:100%}.scroll{overflow:auto;max-height:650px}table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #e0e7eb;vertical-align:top}th{position:sticky;top:0;background:#edf3f5}td.num{text-align:right;font-variant-numeric:tabular-nums}.notice{border-left:4px solid #cd9c27;padding:10px 15px;background:#fffaf0}details{margin:10px 0}summary{cursor:pointer}.downloads{line-height:2}button{font:inherit;padding:8px 14px;background:var(--accent);color:white;border:0;border-radius:5px;cursor:pointer}caption{text-align:left;padding:8px 0;font-weight:600}
+</style></head><body><main>
+<nav><a href="index.html">← R&amp;D–income dashboard</a> · <a href="sources.html">R&amp;D sources</a> · <a href="INDUSTRY_DATA.md">Supplement methodology</a></nav>
+<h1>Export technology &amp; detailed value added</h1>
+<p>Data assembly: <strong>Handy Satria</strong> · World Bank / UNIDO / OECD</p>
+<p class="muted">Supplement built __BUILD_UTC__. R&amp;D/income inputs: __RD_BUILD_UTC__. Requested period: 2000–2025.</p>
+<section class="card stats" aria-label="Data coverage">__COVERAGE__</section>
+<section class="card"><h2>Medium- and high-tech exports</h2>
+<p>Percentage of <strong>total manufactured exports</strong> — WDI <code>TX.MNF.TECH.ZS.UN</code>, sourced from UNIDO CIP.</p>
+<div class="controls"><label>Search economy<input id="export-search" type="search" placeholder="Name or ISO3"></label><label>Reporting year<select id="export-year"><option value="latest">Latest available, year shown</option></select></label></div>
+<p id="export-status" aria-live="polite"></p><div class="scroll"><table><caption>Export technology share by economy</caption><thead><tr><th>Economy</th><th>Year</th><th>% manufactured exports</th><th>Source status / note</th></tr></thead><tbody id="export-rows"></tbody></table></div></section>
+<section class="card"><h2>Value added by ISIC two-digit division</h2>
+<p>Latest available year for the selected economy and source. The full annual series is downloadable below.</p>
+<div class="controls"><label>Economy<select id="gva-country"></select></label><label>Source<select id="gva-source"></select></label></div>
+<p id="gva-status" aria-live="polite"></p>
+<p class="notice">OECD covers the wider economy where activities are available. UNIDO covers industrial establishments in sections B–E; valuation and survey scope vary. Single-division codes can still have coverage limitations. Sources overlap and should not be pooled without reconciliation.</p>
+<div class="scroll"><table><caption id="gva-caption">Division-level observations</caption><thead><tr><th>ISIC division</th><th>Activity</th><th>National-currency units</th><th>Provider USD (UNIDO)</th><th>Status / mapping</th></tr></thead><tbody id="gva-rows"></tbody></table></div>
+<details><summary>Units, combinations and missing values</summary><p>OECD source amounts are scaled by the reported power of ten into national-currency units. STAN currency codes are unresolved; UNIDO catalog currency labels are not treated as verified historical currencies. USD amounts are UNIDO's published conversion. All amounts are current prices.</p><p>Combined activities are preserved in a separate download, never split into divisions. D, L, O, P and U are explicitly marked equivalents of single divisions. Blank values are missing. UNIDO numeric zeros are marked because its portal displays them as a dash. Country/year/activity/observation notes are in the metadata download.</p></details>
+</section>
+<section class="card downloads"><h2>Downloads &amp; provenance</h2>
+<p><a href="industry_exports_gva.xlsx">Companion Excel workbook</a> · <a href="world-rd-income.zip">Full reproducible research ZIP</a><br>
+<a href="mht_exports_annual.csv">Annual export percentages</a> · <a href="rd_income_exports_annual.csv">Same-year R&amp;D/income/export join</a> · <a href="rd_income_exports_snapshot.csv">Cross-section with export columns</a><br>
+<a href="gva_isic2.csv">ISIC two-digit value added</a> · <a href="gva_other_activities.csv">Other activities and combinations</a><br>
+<a href="industry_country_coverage.csv">Country coverage</a> · <a href="gva_country_year_coverage.csv">Country/year/division coverage</a> · <a href="gva_metadata.csv">Country and observation notes</a> · <a href="gva_definitions.csv">OECD definitions/flags</a><br>
+<a href="INDUSTRY_DATA.md">Methodology and limitations</a> · <a href="industry_source_inventory.csv">Source inventory</a> · <a href="industry_source_manifest.json">Exact request manifest</a> · <a href="industry_validation.json">Build validation</a> · <a href="industry_verification.json">Independent verification</a></p>
+<details><summary>Exact sources, request bodies and checksums</summary>__SOURCE_ENTRIES__</details></section>
+<p class="muted">Missing observations are explicit. Latest years differ across sources and economies. A source having some divisions does not establish complete whole-economy coverage.</p>
+</main><script id="industry-data" type="application/json">__INDUSTRY_DATA__</script><script>
+"use strict";
+const data=JSON.parse(document.getElementById("industry-data").textContent),byId=id=>document.getElementById(id);
+const fmt=v=>v===null||v===undefined?"Missing":Number(v).toLocaleString("en",{maximumFractionDigits:2});
+function cell(row,text,number=false){const td=document.createElement("td");td.textContent=text;if(number)td.className="num";row.append(td);}
+function option(select,value,text){const o=document.createElement("option");o.value=value;o.textContent=text;select.append(o);}
+for(let year=2025;year>=2000;year--)option(byId("export-year"),year,String(year));
+for(const c of [...data.countries].sort((a,b)=>a.country.localeCompare(b.country)))option(byId("gva-country"),c.iso3,c.country+" ("+c.iso3+")");
+for(const [key,value] of Object.entries(data.sourceNames))option(byId("gva-source"),key,value);
+if(data.countries.some(c=>c.iso3==="GBR"))byId("gva-country").value="GBR";
+const exportsByKey=new Map(data.exports.map(r=>[r.iso3+":"+r.year,r]));
+function renderExports(){const text=byId("export-search").value.trim().toLowerCase(),year=byId("export-year").value,fragment=document.createDocumentFragment();let numeric=0,count=0;
+for(const c of [...data.countries].sort((a,b)=>a.country.localeCompare(b.country))){if(!(c.country+" "+c.iso3).toLowerCase().includes(text))continue;const y=year==="latest"?c.export_latest_year:Number(year),r=exportsByKey.get(c.iso3+":"+y);const value=r?.mht_exports_percent_manufactured;if(value!==null&&value!==undefined)numeric++;count++;const row=document.createElement("tr");cell(row,c.country+" ("+c.iso3+")");cell(row,y??"—");cell(row,fmt(value),true);cell(row,[r?.obs_status,r?.footnote,value==null?"No observation for this selection":""].filter(Boolean).join(" · "));fragment.append(row);}byId("export-rows").replaceChildren(fragment);byId("export-status").textContent=numeric+" of "+count+" displayed economies have a value. Latest available does not align reporting years.";}
+function renderGVA(){const iso=byId("gva-country").value,source=byId("gva-source").value,c=data.countries.find(c=>c.iso3===iso),year=c[source+"_latest_year"],rows=data.gva.filter(r=>r.iso3===iso&&r.source===source).sort((a,b)=>a.isic_division.localeCompare(b.isic_division)),fragment=document.createDocumentFragment();byId("gva-status").textContent=year===null?"No numeric division data in the requested 2000–2025 period.":"Latest available: "+year+" · "+c[source+"_divisions_latest"]+" numeric divisions. This year may have fewer divisions than earlier years.";byId("gva-caption").textContent=c.country+" · "+data.sourceNames[source]+(year?" · "+year:"");
+for(const r of rows){const tr=document.createElement("tr");cell(tr,r.isic_division);cell(tr,r.activity_label);cell(tr,fmt(r.value_national_currency)+(r.currency_code?" "+r.currency_code:" (currency code unresolved)"),true);cell(tr,r.source==="UNIDO_INDSTAT"?fmt(r.value_usd_provider):"—",true);cell(tr,[r.obs_status,r.value_status!=="reported"?r.value_status:"",r.division_mapping==="single_division_section_equivalent"?r.activity_code+" ≡ "+r.isic_division:"",r.source==="UNIDO_INDSTAT"?r.valuation:""].filter(Boolean).join(" · "));fragment.append(tr);}byId("gva-rows").replaceChildren(fragment);}
+byId("export-search").addEventListener("input",renderExports);byId("export-year").addEventListener("change",renderExports);byId("gva-country").addEventListener("change",renderGVA);byId("gva-source").addEventListener("change",renderGVA);renderExports();renderGVA();
+</script></body></html>
