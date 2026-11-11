@@ -22,12 +22,13 @@ def build_dashboard(destination):
         (destination/name).write_bytes(gzip.compress(body,mtime=0));files.append(name)
     for name in ['dashboard.css','dashboard.js','income_core.js','income_chart.js','innovation_chart.js','dashboard_bridge.js','research_group_core.js','research_compare_chart.js','research_group_chart.js','INCOME_GROUPS.md','RESEARCH_GROUPS.md']:
         copy(name)
-    for name in ['income_explorer.json','income_classifications.csv','innovation_annual.csv','income_validation.json',
+    for name in ['income_explorer.json','income_classifications.csv','innovation_annual.csv','basque_innovation_annual.csv','income_validation.json',
                  'research_group_classification.csv','research_group_bridge.csv','research_group_coverage.csv','research_groups.xlsx','research_group_validation.json']:
         copy(name,ROOT/'data'/name)
     for name in ['research_group_annual.csv','research_group_joined.csv','research_group_components.csv']:
         compressed(name+'.gz',(ROOT/'data'/name).read_bytes())
     copy('income_source_manifest.json',ROOT/'data/income_raw/manifest.json')
+    copy('basque_innovation_source_manifest.json',ROOT/'data/basque_innovation_raw/manifest.json')
     data=json.loads((ROOT/'data/explorer_history.json').read_text('utf-8'))
     for key,name in [('sectorField','national-sector.json.gz'),('breakdowns','national-breakdowns.json.gz')]:
         compressed(name,safe(data[key]).encode('utf-8'));data[key]={**data[key],'rows':[]}

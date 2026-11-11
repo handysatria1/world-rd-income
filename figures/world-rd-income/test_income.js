@@ -46,3 +46,31 @@ assert.equal(core.countryObservations(individuals,{...one,metric:'patents',paten
 r=core.countryObservations(individuals,{...one,metric:'patents',patents:'total',year:2022}).rows[1];assert.equal(r.value,null);assert.equal(r.source_values,'10;missing');assert.equal(r.source_record,'21;32');
 r=core.countryObservations(individuals,{...one,metric:'patents',patents:'nonresident'}).rows[1];assert.equal(r.year,2021);assert.equal(r.value,8);assert.equal(r.indicator,'IP.PAT.NRES');
 console.log('Country selection, exact/latest/common years, zeros, patent components and provenance checks passed.');
+
+// Scale conversion requires the denominator from the observation year, including for year selection.
+individuals.countries[0].series.population={2000:{v:2e6,record:70},2021:{v:0,record:71},2022:{v:null,record:72}};
+individuals.countries[1].series.population={2000:{v:3e6,record:80},2021:{v:4e6,record:81}};
+countries=core.countryObservations(individuals,{...one,scale:'total'});
+assert.deepEqual(countries.rows.map(r=>[r.year,r.value]),[[2021,12],[2000,0]]);
+assert.equal(core.countryObservations(individuals,{...one,scale:'total',year:'common'}).commonYear,2000);
+r=core.countryObservations(individuals,{...one,scale:'total',year:2022}).rows[1];
+assert.equal(r.value,null);assert.match(r.missing_reason,/population/);assert.equal(r.population_source_record,'72');
+assert.equal(core.countryObservations(individuals,{...one,metric:'patents',patents:'nonresident',scale:'perMillion',year:2021}).rows[1].value,null);
+r=core.countryObservations(individuals,{...one,metric:'patents',patents:'total',scale:'perMillion',year:2000}).rows[0];
+assert.equal(r.value,10/3);assert.equal(r.raw_value,10);assert.equal(r.population,3e6);assert.equal(r.population_year,2000);assert.equal(r.source_values,'4;6');assert.match(r.method,/resident \+ nonresident/);
+const region=individuals.countries[2];
+region.series={researchersTotal:{2023:{v:50,record:'Eustat cell',provenance:{method:'reported Eustat FTE total'}},2024:{v:60}},population:{2023:{v:2e6,flags:'MIDYEAR_PROXY',provenance:{method:'midyear proxy',source_values:'1900000;2100000'}}}};
+region.indicatorMetadata={researchersTotal:{code:'Eustat',source_file:'eustat.json',organization:'Eustat'}};
+r=core.countryObservations(individuals,{...one,ids:['R'],scale:'total'}).rows[0];
+assert.equal(r.year,2024);assert.equal(r.value,60);assert.equal(r.population_used,false);assert.equal(r.source_file,'eustat.json');
+r=core.countryObservations(individuals,{...one,ids:['R'],scale:'perMillion'}).rows[0];
+assert.equal(r.year,2023);assert.equal(r.value,25);assert.equal(r.raw_unit,'researchers (FTE)');assert.equal(r.source_record,'Eustat cell');assert.equal(r.population_flags,'MIDYEAR_PROXY');assert.equal(r.population_source_values,'1900000;2100000');
+r=core.countryObservations(individuals,{...one,ids:['R'],scale:'perMillion',year:2025}).rows[0];assert.equal(r.value,null);assert.equal(r.indicator,'Eustat');assert.equal(r.source_file,'eustat.json');
+for(const v of [-1,0,NaN,Infinity,null]){region.series.population[2023].v=v;assert.equal(core.countryMeasurement(region,'researchers',2023,'resident','perMillion').value,null);}
+region.contextIndicators={pctPatents:{metadata:{label:'PCT',unit:'per GDP'},series:{2022:{v:1.3,record:'Hoja1!I6'},2023:{v:null,record:'Hoja1!J6'}}}};
+assert.equal(core.regionalContext(individuals,{ids:['R'],metric:'patents',year:'latest'})[0].year,2022);
+assert.equal(core.regionalContext(individuals,{ids:['R'],metric:'patents',year:2023})[0].value,null);
+assert.equal(core.regionalContext(individuals,{ids:['R'],metric:'patents',year:'common'})[0].year,null);
+assert.equal(core.countryObservations(individuals,{...one,ids:['R'],metric:'patents'}).rows[0].value,null);
+assert.equal(core.aggregate(individuals,{...opts,ids:['R']}).rows[0].n,0);
+console.log('Population conversions, denominator-aware years, native regional totals and non-equivalent context checks passed.');

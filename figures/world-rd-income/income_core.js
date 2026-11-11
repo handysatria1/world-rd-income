@@ -16,31 +16,63 @@
     }
     return country.series[metric==='patents'&&patentMode==='nonresident'?'patentsNonresident':metric]?.[year]?.v??null;
   }
+  function countryMeasurement(country,metric,year,patents='resident',scale=metric==='researchers'?'perMillion':'total'){
+    const nativeTotal=metric==='researchers'&&!!country.series.researchersTotal&&(country.series.researchersTotal[year]?.v!=null||country.series.researchers?.[year]?.v==null);
+    const rawMetric=nativeTotal?'researchersTotal':metric,raw=value(country,rawMetric,year,patents);
+    const population=country.series.population?.[year]?.v??null;
+    const conversion=metric==='researchers'&&!nativeTotal?scale==='total':scale==='perMillion';
+    const v=raw==null||conversion&&!(Number.isFinite(population)&&population>0)?null:!conversion?raw:scale==='total'?raw*population/1e6:raw/population*1e6;
+    return {value:v,raw,rawMetric,population,conversion,nativeTotal};
+  }
+  function sourceDetails(data,c,keys,year){
+    const cells=keys.map(k=>c.series[k]?.[year]),meta=keys.map(k=>c.indicatorMetadata?.[k]||data.indicators[k]||{});
+    const join=(key,fallback,separator=';')=>keys.map((k,i)=>cells[i]?.provenance?.[key]??fallback(k,cells[i],meta[i])).join(separator);
+    return {indicator:join('indicator',(k,cell,m)=>m.code||k,' + '),source_file:join('source_file',(k,cell,m)=>m.source_file||k+'.json'),
+      source_record:join('source_record',(k,cell)=>cell?.record??'not returned'),source_values:join('source_values',(k,cell)=>cell?.v??'missing'),
+      flags:join('flags',(k,cell)=>cell?.flags||''),notes:join('notes',(k,cell)=>cell?.note||''),
+      source_url:join('source_url',(k,cell,m)=>m.url||''),source_organization:join('source_organization',(k,cell,m)=>m.organization||''),
+      api_lastupdated:join('api_lastupdated',(k,cell,m)=>m.updated||''),retrieved_utc:join('retrieved_utc',(k,cell,m)=>m.retrieved||'')};
+  }
   function countryObservations(data,opts){
     const byISO=new Map(data.countries.map(c=>[c.iso,c]));
     const countries=(opts.ids??data.countries.map(c=>c.iso)).map(iso=>byISO.get(iso)).filter(Boolean);
-    const metric=opts.metric,patents=opts.patents||'resident',requested=String(opts.year);
+    const metric=opts.metric,patents=opts.patents||'resident',requested=String(opts.year),scale=opts.scale||(metric==='researchers'?'perMillion':'total');
     const keys=metric==='patents'?(patents==='total'?['patents','patentsNonresident']:[patents==='nonresident'?'patentsNonresident':'patents']):[metric];
-    const available=c=>[...new Set(keys.flatMap(k=>Object.keys(c.series[k]||{})))].map(Number).filter(y=>value(c,metric,y,patents)!=null).sort((a,b)=>b-a);
+    const measurement=(c,y)=>countryMeasurement(c,metric,y,patents,scale);
+    const available=c=>[...new Set([...keys,...(metric==='researchers'?['researchersTotal']:[])].flatMap(k=>Object.keys(c.series[k]||{})))].map(Number).filter(y=>y>=2000&&y<=2025&&measurement(c,y).value!=null).sort((a,b)=>b-a);
     const years=countries.map(available);
-    const commonYear=years[0]?.find(y=>countries.every(c=>value(c,metric,y,patents)!=null))??null;
+    const commonYear=years[0]?.find(y=>countries.every(c=>measurement(c,y).value!=null))??null;
     const rows=countries.map((c,i)=>{
       const year=requested==='latest'?(years[i][0]??null):requested==='common'?commonYear:+requested;
-      const v=year==null?null:value(c,metric,year,patents),classification=classify(data,c.iso,opts.vintage,opts.combine);
-      const cells=keys.map(k=>year==null?null:c.series[k]?.[year]);
-      const missing=v!=null?'':requested==='common'?'No common year for all selected economies':year==null?'No observations in 2000–2025':'No observation in exact year';
+      const m=measurement(c,year),v=year==null?null:m.value,classification=classify(data,c.iso,opts.vintage,opts.combine);
+      const source=sourceDetails(data,c,m.nativeTotal?['researchersTotal']:keys,year),pop=sourceDetails(data,c,['population'],year);
+      const missing=v!=null?'':requested==='common'?'No common year for all selected economies':year==null?'No complete observations in 2000–2025':m.raw!=null&&m.conversion?'Missing or nonpositive same-year population':'No observation in exact year';
+      const method=m.conversion?(scale==='total'?'derived total = source rate × same-year population / 1,000,000':`derived rate = ${metric==='patents'&&patents==='total'?'(resident + nonresident)':'source total'} / same-year population × 1,000,000`):c.series[m.rawMetric]?.[year]?.provenance?.method||(metric==='patents'&&patents==='total'?'derived resident + nonresident':'reported WDI value');
       return {iso:c.iso,economy:c.name,geography_type:c.region?'region':'economy',metric,requested_year:requested,year,value:v,
-        unit:data.indicators[metric].unit,availability:v==null?'missing':'available',missing_reason:missing,
-        latest_available_year:years[i][0]??null,patent_definition:metric==='patents'?patents:'',
-        method:metric==='patents'&&patents==='total'?'derived resident + nonresident':'reported WDI value',
+        unit:metric==='researchers'?(scale==='total'?'researchers (FTE)':'per million people'):scale==='perMillion'?(metric==='patents'?'applications':'articles')+' per million people':data.indicators[metric].unit,scale,availability:v==null?'missing':'available',missing_reason:missing,
+        latest_available_year:years[i][0]??null,patent_definition:metric==='patents'?patents:'',method,
         classification:classification.vintage,group_label:classification.label,
-        indicator:keys.map(k=>data.indicators[k].code).join(' + '),source_file:keys.map(k=>k+'.json').join(';'),
-        source_record:cells.map(cell=>cell?.record??'not returned').join(';'),source_values:cells.map(cell=>cell?.v??'missing').join(';'),
-        flags:cells.map(cell=>cell?.flags||'').join(';'),notes:cells.map(cell=>cell?.note||'').join(';'),
-        source_url:keys.map(k=>data.indicators[k].url||'').join(';'),source_organization:keys.map(k=>data.indicators[k].organization||'').join(';'),
-        api_lastupdated:keys.map(k=>data.indicators[k].updated||'').join(';'),retrieved_utc:keys.map(k=>data.indicators[k].retrieved||'').join(';'),built_utc:data.builtUTC||''};
+        ...source,raw_value:m.raw,raw_unit:m.nativeTotal?'researchers (FTE)':data.indicators[metric].unit,
+        population:m.population,population_year:m.population==null?null:year,population_used:m.conversion,
+        population_method:c.series.population?.[year]?.provenance?.method||'reported WDI population',
+        ...Object.fromEntries(Object.entries(pop).map(([k,v])=>['population_'+k,v])),built_utc:data.builtUTC||''};
     });
     return {rows,commonYear,metric};
+  }
+  function regionalContext(data,opts,commonYear=null){
+    const keys=opts.metric==='patents'?['pctPatents']:opts.metric==='publications'?['internationalPublications','topCitedShare']:[];
+    return (opts.ids||[]).flatMap(iso=>{
+      const c=data.countries.find(c=>c.iso===iso);
+      return keys.filter(k=>c?.contextIndicators?.[k]).map(k=>{
+        const {metadata:m,series}=c.contextIndicators[k],years=Object.keys(series).map(Number).filter(y=>series[y].v!=null).sort((a,b)=>b-a);
+        const year=opts.year==='latest'?years[0]??null:opts.year==='common'?commonYear:+opts.year,cell=series[year];
+        return {iso,economy:c.name,metric:k,label:m.label,requested_year:opts.year,year,value:cell?.v??null,unit:m.unit,
+          availability:cell?.v!=null?'available':'missing',missing_reason:cell?.v!=null?'':year==null?'No common comparison year':'No observation in exact year',
+          definition:m.definition,method:cell?.provenance?.method||'reported Eustat EIS 2025 ratio',indicator:m.code,
+          source_file:m.source_file,source_record:cell?.record||'not returned',source_values:cell?.v??null,flags:cell?.flags||'',notes:cell?.note||'',
+          source_url:m.url,display_url:m.display_url,source_organization:m.organization,source_updated:m.updated,retrieved_utc:m.retrieved,built_utc:data.builtUTC};
+      });
+    });
   }
   function aggregate(data,opts){
     const codes=opts.combine?['HIC','MIC','LIC']:['HIC','UMC','LMC','LIC'];
@@ -71,6 +103,6 @@
     }
     return {rows,audit};
   }
-  const api={labels,symbols,classify,value,aggregate,countryObservations};
+  const api={labels,symbols,classify,value,aggregate,countryObservations,countryMeasurement,regionalContext};
   if(typeof module!=='undefined')module.exports=api;else root.IncomeCore=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

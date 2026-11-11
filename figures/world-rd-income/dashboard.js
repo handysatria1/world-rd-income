@@ -81,7 +81,7 @@ window.Dashboard=(()=>{
       for(const id of ['view','shared-year','sample-scope'])$(id).addEventListener('change',update);
       $('industry-classification').onchange=()=>navigate($('industry-classification').value==='research'?'research':'rd-comparison');
       for(const id of ['income-vintage','income-filter','combine-middle'])$(id).addEventListener('change',()=>{chips();update();});
-      for(const id of ['income-year-a','income-year-b','income-stat','income-sample','patent-mode','innovation-patent-mode'])$(id).addEventListener('change',update);
+      for(const id of ['income-year-a','income-year-b','income-stat','income-sample','patent-mode','innovation-patent-mode','innovation-scale'])$(id).addEventListener('change',update);
       $('economy-search').oninput=choices;$('example-economies').onclick=()=>{ids=[...defaults];chips();update();};$('clear-economies').onclick=()=>{ids=[];chips();update();};
       $('use-selection').onclick=()=>{$('sample-scope').value='selected';update();};
       document.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(views.find(v=>v[1]===b.dataset.section)[0]));

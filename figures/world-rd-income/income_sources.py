@@ -17,6 +17,7 @@ INDICATORS = {
     'patents': ('IP.PAT.RESD', 'Patent applications, residents', 'applications'),
     'patentsNonresident': ('IP.PAT.NRES', 'Patent applications, nonresidents', 'applications'),
     'publications': ('IP.JRN.ARTC.SC', 'Scientific and technical journal articles', 'articles'),
+    'population': ('SP.POP.TOTL', 'Population', 'people'),
 }
 SOURCES = {
     'classification_current.xlsx': 'https://ddh-openapi.worldbank.org/resources/DR0095333/download',

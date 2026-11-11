@@ -9,6 +9,7 @@ import re
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from income_sources import ROOT, RAW, INDICATORS
+from basque_innovation import load_basque_innovation
 
 DATA = ROOT / 'data'
 GROUPS = {'High income': 'HIC', 'Upper middle income': 'UMC', 'Lower middle income': 'LMC', 'Low income': 'LIC'}
@@ -93,16 +94,24 @@ def build():
                            'obs_status': r.get('obs_status', ''), 'footnote': r.get('footnote', ''), 'source_file': metric + '.json',
                            'source_record': record, 'api_lastupdated': meta.get('lastupdated', ''),
                            'retrieved_utc': manifest[metric + '.json']['retrieved_utc']})
+    series, regional_meta, context, regional_annual, regional_manifest = load_basque_innovation()
+    assert countries['ES-PV']['region']
+    countries['ES-PV']['series'].update(series)
+    countries['ES-PV']['indicatorMetadata'] = regional_meta
+    countries['ES-PV']['contextIndicators'] = context
     payload = {'builtUTC': datetime.now(timezone.utc).isoformat(), 'currentVintage': vintage, 'classificationNotes': notes,
                'historicalVintages': sorted(set(fiscal.values()), reverse=True), 'indicators': metadata,
-               'countries': sorted(countries.values(), key=lambda c: c['name']), 'sources': manifest}
+               'countries': sorted(countries.values(), key=lambda c: c['name']), 'sources': manifest, 'regionalSources': regional_manifest}
     write_csv('income_classifications.csv', classifications)
     write_csv('innovation_annual.csv', annual)
+    write_csv('basque_innovation_annual.csv', regional_annual)
     (DATA / 'income_explorer.json').write_text(json.dumps(payload, ensure_ascii=False, separators=(',', ':'), allow_nan=False) + '\n', encoding='utf-8')
     report = {'validation': 'passed', 'built_utc': payload['builtUTC'], 'current_vintage': vintage,
               'classification_rows': len(classifications), 'indicator_rows_including_missing': len(annual),
               'checks': ['archived_hashes', 'official_current_historical_agreement', 'unique_country_year_indicator',
-                         'finite_nonnegative_values', 'aggregates_and_regions_excluded', 'source_cell_locators'],
+                          'finite_nonnegative_values', 'WDI_aggregates_and_regions_excluded', 'source_cell_locators',
+                          'Eustat_hashes_requests_coordinates', 'population_midyear_proxy_flagged', 'EIS_indicators_separate'],
+               'regional_rows_including_missing': len(regional_annual),
               'note': 'Historical workbook Parameters sheet still says FY21; classification columns and current notes explicitly extend to ' + vintage + '. Parameters is not used.'}
     (DATA / 'income_validation.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(report, indent=2))

@@ -92,7 +92,9 @@ jobs:
           python verify_rd_industry.py
           node test_rd_industry.js --built
           python income_sources.py --refresh
+          python basque_innovation_sources.py --refresh
           python income_data.py
+          python verify_basque_innovation.py
           python research_groups.py
           python build_site.py --destination "$GITHUB_WORKSPACE/_site"
           python verify_broad_site.py --site "$GITHUB_WORKSPACE/_site"
