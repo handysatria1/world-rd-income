@@ -161,6 +161,8 @@ The full audit, including countries with neither variable, is in [coverage_and_e
 
 ## Sources and selection rule
 
+**[Detailed source guide](https://handysatria1.github.io/world-rd-income/sources.html)** · **[Complete source inventory (CSV)](https://handysatria1.github.io/world-rd-income/source_inventory.csv)** · **[Original provenance manifest (JSON)](https://handysatria1.github.io/world-rd-income/source_manifest.json)**. The guide identifies all providers, dataset/indicator/table IDs, ONS cell locators, units, query ranges, transformations and coverage-review sources. Its inventory is regenerated from each build's exact raw manifest and includes request bodies, URLs, retrieval timestamps, byte counts, checksums and release/update fields. These links describe the current published build; use the research ZIP from an archived release for an older vintage. Guide source: `data_sources.html`; inventory generation: `source_guide.py`.
+
 ### R&D: OECD MSTI and UNESCO UIS via World Bank WDI
 
 1. **OECD Main Science and Technology Indicators:** `OECD.STI.STP,DSD_MSTI@DF_MSTI,1.3`; annual `G` (GERD), `PT_B1GQ` (percentage of GDP), 2020–2024. The exact OECD snapshot used for the previous reconstruction is carried forward.

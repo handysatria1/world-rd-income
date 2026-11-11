@@ -7,6 +7,8 @@ Explore worldwide R&D intensity, income, funding, performing sectors and researc
 - [Current complete research package](https://handysatria1.github.io/world-rd-income/world-rd-income.zip): exact source responses, provenance, data, workbook, figures, code and validation reports.
 - [Archived validated releases](https://github.com/handysatria1/world-rd-income/releases).
 - [Methodology and coverage](figures/world-rd-income/README.md).
+- [Detailed data sources and provenance](https://handysatria1.github.io/world-rd-income/sources.html), including dataset/indicator/table IDs, ONS cell locators, units, conversions and limitations.
+- [Complete source inventory (CSV)](https://handysatria1.github.io/world-rd-income/source_inventory.csv) and [original provenance manifest (JSON)](https://handysatria1.github.io/world-rd-income/source_manifest.json): exact URLs, request bodies, retrieval dates, byte counts, checksums and release/update metadata for the current build.
 - [Official Eustat/ONS data and limitations](figures/world-rd-income/OFFICIAL_DATA.md).
 - [Automation and reproduction](figures/world-rd-income/AUTOMATION.md).
 - [Refresh/deployment runs](https://github.com/handysatria1/world-rd-income/actions).

@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from source_guide import build_source_guide
+
 ROOT = Path(__file__).resolve().parent
 
 
@@ -38,12 +40,14 @@ def build_site(destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     if any(destination.iterdir()):
         raise ValueError(f"Use an empty site destination: {destination}")
+    build_source_guide(destination, report["built_utc"])
 
     # Explicit package directories avoid publishing unrelated workspace material.
     files = [ROOT / name for name in (
         "download_data.py", "reproduce_figures.py", "build_site.py",
         "requirements.txt", "README.md", "AUTOMATION.md", "OFFICIAL_DATA.md", "historical_explorer.py",
         "CITATION.cff", "CITATION.bib",
+        "source_guide.py", "data_sources.html",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
         "nominal_rd.py", "test_nominal_rd.py",
         "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",
@@ -58,6 +62,8 @@ def build_site(destination: Path) -> None:
             archive.write(path, "world-rd-income/figures/world-rd-income/" + path.relative_to(ROOT).as_posix())
         for name in ("CITATION.cff", "CITATION.bib"):
             archive.write(ROOT / name, "world-rd-income/" + name)
+        for name in ("sources.html", "source_inventory.csv", "source_manifest.json"):
+            archive.write(destination / name, "world-rd-income/" + name)
         for name in ("update-world-rd-income.yml", "publish-world-rd-snapshot.yml"):
             workflow = ROOT.parents[1] / ".github" / "workflows" / name
             if workflow.exists():
@@ -84,6 +90,9 @@ def build_site(destination: Path) -> None:
             links.append(f'<a href="{filename}">{extension.upper()}</a>')
         chart_links.append(title + ": " + " / ".join(links))
     document = document.replace(marker, (
+        '<p><a href="sources.html">Detailed data sources, exact requests and provenance</a> · '
+        '<a href="source_inventory.csv">Source inventory (CSV)</a> · '
+        '<a href="source_manifest.json">Original provenance manifest (JSON)</a></p>'
         '<p><a href="world-rd-income.zip">Download this build: figures, Excel/CSV data, '
         'exact source responses, methodology and Python/JavaScript code (ZIP)</a> · '
         '<a href="current_results.md">Current results and updated captions</a><br>'
