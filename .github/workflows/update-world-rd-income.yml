@@ -95,7 +95,11 @@ jobs:
           python basque_innovation_sources.py --refresh
           python income_data.py
           python verify_basque_innovation.py
+          python government_industry_sources.py --refresh
+          python government_industry.py
           python research_groups.py
+          python verify_government_industry.py
+          node test_research_groups.js --built
           python build_site.py --destination "$GITHUB_WORKSPACE/_site"
           python verify_broad_site.py --site "$GITHUB_WORKSPACE/_site"
           python verify_dashboard.py --site "$GITHUB_WORKSPACE/_site"

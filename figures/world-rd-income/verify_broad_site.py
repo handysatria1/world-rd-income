@@ -75,7 +75,7 @@ def verify(stage):
     for filename, checksum in json.loads((stage / 'rd_industry_validation.json').read_text('utf-8'))['output_sha256'].items():
         assert hashlib.sha256((stage / filename).read_bytes()).hexdigest() == checksum
     pages = ['index.html', 'industry.html', 'sources.html', 'broad-sectors.html', 'sector-economy.html', 'rd-industry.html',
-             'view-national.html','view-rd.html','view-economy.html','view-gva.html','view-research.html','view-detail.html','view-sources.html']
+             'view-national.html','view-rd.html','view-economy.html','view-gva.html','view-research.html','view-research-six.html','view-detail.html','view-sources.html']
     links_checked = 0
     for page in pages:
         links = Links()
@@ -93,7 +93,7 @@ def verify(stage):
             for link in links.links:
                 assert 'world-rd-income/' + link in members, (page, link)
         raw_checked = 0
-        for folder in ['raw', 'industry_raw', 'broad_sector_raw', 'sector_economy_raw', 'rd_industry_raw']:
+        for folder in ['raw', 'industry_raw', 'broad_sector_raw', 'sector_economy_raw', 'rd_industry_raw', 'government_industry_raw']:
             prefix = 'world-rd-income/figures/world-rd-income/data/' + folder + '/'
             manifest = json.loads(archive.read(prefix + 'manifest.json'))
             for name, info in manifest.items():

@@ -35,8 +35,15 @@ def verify(stage):
         'Employment':{(r['iso3'],r['year'],r['activity_code']):r for r in read_csv(data/'sector_economy_components.csv') if r['metric']=='employment'},
         'BERD':{(r['iso3'],r['year'],r['source'],r['activity_code']):r for r in read_csv(data/'rd_industry_components.csv')}}
     source_checks=0
+    official={(r['iso3'],str(r['year']),r['metric'],r['source'],r['activity_code']):r for r in json.loads((data/'government_industry_explorer.json').read_text('utf-8'))['rows']}
     for r in read_csv(data/'research_group_components.csv'):
         components[r['iso3'],r['year'],r['group_id'],r['metric']].append(r)
+        gov=official.get((r['iso3'],r['year'],r['metric'],r['source'],r['code']))
+        if gov and r['source'] in ['ONS BERD 2024','ONS current-price GVA','OECD STAN 2025']:
+            assert same(gov['amount_local'],float(r['source_amount_units']) if r['source_amount_units'] else None)
+            assert r['source_file']==gov['source_file'] and r['source_locator']==gov['source_locator'] and r['flags']==gov['flags']
+            source_checks+=1
+            continue
         key=(r['iso3'],r['year'],r['source'],r['code']) if r['metric']=='BERD' else (r['iso3'],r['year'],r['code'])
         original=originals[r['metric']].get(key)
         if original is None:
@@ -98,6 +105,8 @@ def verify(stage):
                 workbook_rows+=1
     book.close()
     for name in ['research_group_annual.csv','research_group_joined.csv','research_group_components.csv']:
+        assert gzip.decompress((stage/(name+'.gz')).read_bytes())==(data/name).read_bytes()
+    for name in ['rd_breakdown_annual.csv','rd_sector_field_annual.csv','research_six_group_annual.csv','research_six_group_joined.csv','research_six_group_components.csv']:
         assert gzip.decompress((stage/(name+'.gz')).read_bytes())==(data/name).read_bytes()
     for path in stage.glob('*.json.gz'):json.loads(gzip.decompress(path.read_bytes()))
     with ZipFile(stage/'world-rd-income.zip') as archive:

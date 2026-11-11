@@ -20,10 +20,25 @@ assert.deepEqual(core.select(byKey,['AAA','BBB'],'latest',accept).map(r=>r.year)
 assert.deepEqual(core.select(byKey,['AAA','BBB'],'common',accept).map(r=>r.year),[2000,2000]);
 assert.equal(core.select(byKey,['AAA'],'2010',accept)[0].rows.length,0);
 assert.equal(core.select(byKey,['AAA','ZZZ'],'common',accept)[0].year,null);
+const independent=new Map([...byKey,['AAA/2025',[{...end,year:2025,berd_assigned_usd:null,berd_share_percent:null}]],['AAA/2023',[{...end,year:2023,gva_assigned_usd:null,gva_share_percent:null,berd_assigned_usd:12}]]]);
+const latest=core.pairedSelect(independent,['AAA'],'latest',groups,'amount')[0];
+assert.equal(latest.gvaYear,2025);assert.equal(latest.berdYear,2023);assert.equal(latest.year,null);
+assert.equal(latest.rows[0].gva_assigned_usd,150);assert.equal(latest.rows[0].berd_assigned_usd,12);
+assert.equal(latest.rows[0].berd_percent_gva,null);assert.equal(latest.rows[0].employment_year,null);
+assert.equal(core.pairedSelect(independent,['AAA','BBB'],'common',groups,'amount')[0].year,2000);
+assert.equal(core.pairedSelect(independent,['AAA'],'2025',groups,'amount')[0].rows[0].berd_assigned_usd,null);
 if(process.argv.includes('--built')){
   const data=JSON.parse(fs.readFileSync('data/research_group_explorer.json','utf8')),index=new Map();
   for(const r of data.rows){const k=r.iso3+'/'+r.year;if(!index.has(k))index.set(k,[]);index.get(k).push(r);}
   assert.equal(core.groups(data.groups,'Manufacturing').length,5);assert.equal(core.groups(data.groups,'Services').length,7);
+  const current=core.pairedSelect(index,['SGP','GBR'],'latest',core.groups(data.groups,'Manufacturing'),'amount');
+  assert.equal(current[0].berdYear,2023);assert.equal(current[0].gvaYear,2022);
+  assert.equal(current[1].berdYear,2024);assert.equal(current[1].gvaYear,2025);
+  assert(current.flatMap(a=>a.rows).every(r=>r.berd_percent_gva===null));
+  const six=JSON.parse(fs.readFileSync('data/research_six_group_explorer.json','utf8')),sixIndex=new Map();
+  for(const r of six.rows){const k=r.iso3+'/'+r.year;if(!sixIndex.has(k))sixIndex.set(k,[]);sixIndex.get(k).push(r);}
+  const sixLatest=core.pairedSelect(sixIndex,['SGP','GBR'],'latest',core.groups(six.groups,'Manufacturing'),'amount');
+  assert.equal(sixLatest[0].berdYear,2023);assert.equal(sixLatest[1].gvaYear,2025);assert.equal(six.groups.length,6);
   let checked=0,withheld=0;
   for(const iso of data.countries.map(c=>c.iso))for(const g of data.groups){
     const a=index.get(iso+'/2000')?.find(r=>r.group_id===g.id),b=index.get(iso+'/2022')?.find(r=>r.group_id===g.id);

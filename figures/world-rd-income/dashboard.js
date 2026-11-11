@@ -6,13 +6,14 @@ window.Dashboard=(()=>{
     ['researchers','income','Researchers by economy',null,'researchers'],['patents','income','Patent applications by economy',null,'patents'],['publications','income','Journal articles by economy',null,'publications'],
     ['income','income','R&D and innovation by income group',null,null],
     ['breakdown','national','R&D funding and performance','national','breakdown'],['sector','national','R&D by sector and field','national','sector'],
-    ['research','rd','Value added and business R&D','research','comparison'],
+     ['research','rd','Value added and business R&D','research','comparison'],
+     ['research-six','rd','Value added and business R&D · 6 sectors','researchsix','comparison'],
     ...[['comparison','Sector shares: GVA, R&D and employment'],['composition','Business R&D by sector'],['intensity','Business R&D (% of sector GVA)'],['perWorker','Business R&D per worker'],['productivity','R&D intensity and productivity'],['trade','Manufacturing R&D and exports']].map(([k,t])=>['rd-'+k,'rd',t,'rd',k]),
     ['gva','economy','Gross value added by sector','gva','gva'],
     ...[['employment','Employment by sector'],['comparison','GVA and employment shares'],['sector','Productivity by sector'],['economy','Productivity by economy'],['exports','Goods exports by sector']].map(([k,t])=>['economy-'+k,'economy',t,'economy',k]),
     ['detail','data','Industry data tables','detail','detail'],['sources','data','Definitions and sources','sources','sources']
   ];
-  const files={national:'view-national.html',rd:'view-rd.html',gva:'view-gva.html',economy:'view-economy.html',research:'view-research.html',detail:'view-detail.html',sources:'view-sources.html'};
+  const files={national:'view-national.html',rd:'view-rd.html',gva:'view-gva.html',economy:'view-economy.html',research:'view-research.html',researchsix:'view-research-six.html',detail:'view-detail.html',sources:'view-sources.html'};
   let data=null,ids=[...defaults],frames=new Map(),request=0;
   const names=()=>Object.fromEntries(data.countries.map(c=>[c.iso,c.name]));
   const group=iso=>IncomeCore.classify(data,iso,$('income-vintage').value,$('combine-middle').checked);
@@ -52,7 +53,7 @@ window.Dashboard=(()=>{
     $('dashboard-error').hidden=true;$('loading').hidden=true;for(const {iframe}of frames.values())iframe.hidden=true;
     const innovation=['researchers','patents','publications'].includes(id);
     $('income-panel').hidden=id!=='income';$('innovation-panel').hidden=!innovation;document.querySelectorAll('[data-section]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.section===section));
-    const global=['snapshot','compare','income'].includes(id),hasYear=innovation||['snapshot','sector','research','gva','detail'].includes(id)||id.startsWith('rd-')||id.startsWith('economy-');
+    const global=['snapshot','compare','income'].includes(id),hasYear=innovation||['snapshot','sector','research','research-six','gva','detail'].includes(id)||id.startsWith('rd-')||id.startsWith('economy-');
     $('scope-label').hidden=!global;$('shared-year-label').hidden=!hasYear;$('economy-settings').hidden=id==='sources';
     $('classification-control').hidden=!['rd','economy'].includes(section);$('industry-classification').value=id==='research'?'research':'six';
     $('year-help').textContent=innovation?'Compare selected economies. Latest available uses each economy’s latest observation; latest common year requires data for every selected economy. Choose an exact year for a fixed-year comparison.':id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
@@ -79,7 +80,7 @@ window.Dashboard=(()=>{
       $('income-vintage').add(new Option('Current · '+data.currentVintage,'current'));for(const fy of data.historicalVintages)$('income-vintage').add(new Option(fy+' · fixed membership',fy));
       IncomeChart.initialize(data);InnovationChart.initialize();chips();
       for(const id of ['view','shared-year','sample-scope'])$(id).addEventListener('change',update);
-      $('industry-classification').onchange=()=>navigate($('industry-classification').value==='research'?'research':'rd-comparison');
+      $('industry-classification').onchange=()=>navigate($('industry-classification').value==='research'?'research':'research-six');
       for(const id of ['income-vintage','income-filter','combine-middle'])$(id).addEventListener('change',()=>{chips();update();});
       for(const id of ['income-year-a','income-year-b','income-stat','income-sample','patent-mode','innovation-patent-mode','innovation-scale'])$(id).addEventListener('change',update);
       $('economy-search').oninput=choices;$('example-economies').onclick=()=>{ids=[...defaults];chips();update();};$('clear-economies').onclick=()=>{ids=[];chips();update();};

@@ -7,6 +7,7 @@ The destination must be empty. No download or calculation occurs here.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -68,6 +69,7 @@ def build_site(destination: Path) -> None:
         "basque_innovation_sources.py", "basque_innovation.py", "verify_basque_innovation.py",
         "dashboard_site.py", "dashboard.html", "dashboard.css", "dashboard.js", "dashboard_bridge.js",
         "research_groups.py", "research-groups.html", "research_group_chart.js", "research_group_core.js", "research_compare_chart.js", "test_research_groups.js", "RESEARCH_GROUPS.md", "verify_dashboard.py", "test_income.js",
+        "government_industry_sources.py", "government_industry.py", "verify_government_industry.py", "official_industry_chart.js", "GOVERNMENT_INDUSTRIES.md",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
         "nominal_rd.py", "test_nominal_rd.py",
         "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",
@@ -75,7 +77,7 @@ def build_site(destination: Path) -> None:
         "breakdown_sources.py", "breakdown_rd.py", "breakdown_figures.py", "breakdown_core.js",
         "test_breakdown.js", "verify_breakdown.py", "official_sources.py", "official_rd.py",
     )]
-    files += [p for p in (ROOT / "data").rglob("*") if p.is_file() and p.suffix in {".json", ".csv", ".xml", ".xlsx", ".md", ".html", ".zip", ".px", ".pdf"}]
+    files += [p for p in (ROOT / "data").rglob("*") if p.is_file() and p.suffix in {".json", ".csv", ".xml", ".xlsx", ".md", ".html", ".zip", ".px", ".pdf", ".hwpx"}]
     files += [p for p in (ROOT / "output").iterdir() if p.is_file() and p.suffix in {".html", ".png", ".svg", ".pdf"}]
     with ZipFile(destination / "world-rd-income.zip", "w", ZIP_DEFLATED) as archive:
         for path in sorted(files):
@@ -87,7 +89,13 @@ def build_site(destination: Path) -> None:
                      "broad_sector_source_inventory.csv", "broad_sector_source_manifest.json",
                      "sector_economy_source_inventory.csv", "sector_economy_source_manifest.json",
                      "rd_industry_source_inventory.csv", "rd_industry_source_manifest.json"):
-            archive.write(destination / name, "world-rd-income/" + name)
+            if name.endswith('.html'):
+                offline = (destination / name).read_text('utf-8')
+                for path in ROOT.glob('*.md'):
+                    offline = offline.replace(f'href="{path.name}"', f'href="figures/world-rd-income/{path.name}"')
+                archive.writestr('world-rd-income/' + name, offline)
+            else:
+                archive.write(destination / name, "world-rd-income/" + name)
         # Keep the supplement's downloaded-data links usable after extracting the research ZIP.
         offline = (destination / "industry.html").read_text("utf-8")
         for name in INDUSTRY_DOWNLOADS:
@@ -204,6 +212,17 @@ def build_site(destination: Path) -> None:
                 archive.writestr('world-rd-income/' + name, text)
             else:
                 archive.write(destination / name, 'world-rd-income/' + name)
+    # Keep the Pages artifact below its 1 GB limit. The research ZIP retains
+    # ordinary CSVs; these two large standalone downloads are losslessly gzipped.
+    compressed_downloads=['rd_breakdown_annual.csv','rd_sector_field_annual.csv']
+    for name in compressed_downloads:
+        path=destination/name
+        (destination/(name+'.gz')).write_bytes(gzip.compress(path.read_bytes(),mtime=0))
+        path.unlink()
+    for path in destination.glob('*.html'):
+        text=path.read_text('utf-8')
+        for name in compressed_downloads:text=text.replace('href="'+name+'"','href="'+name+'.gz"')
+        path.write_text(text,encoding='utf-8')
     (destination / ".nojekyll").touch()
     print(f"Website ready: {destination / 'index.html'}")
 
