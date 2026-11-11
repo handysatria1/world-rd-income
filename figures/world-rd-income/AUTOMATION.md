@@ -4,6 +4,8 @@ The supplied workflow checks OECD, World Bank, UNESCO UIS, Eustat and the review
 
 The workflow also refreshes the separately versioned [export technology and detailed value-added supplement](INDUSTRY_DATA.md), including UNIDO INDSTAT. It runs `industry_sources.py --refresh`, `industry_data.py` and `verify_industry.py` before packaging. The supplement joins to that run's validated R&D/income history and retains a separate source manifest and build timestamp.
 
+It also refreshes the [six-sector GVA chart](BROAD_SECTORS.md): all-country OECD TiVA `VALU`, Eustat A38 and annual WDI exchange rates, with a separate manifest. Grouped data, source-cell verification, year-selection checks, the example figures, chart maker and downloads are rebuilt before publication.
+
 Project website: **https://handysatria1.github.io/world-rd-income/**. Source repository and archived releases: **https://github.com/handysatria1/world-rd-income**.
 
 ## 1. Upload the source files
@@ -56,6 +58,19 @@ figures/
     industry_site.py
     industry.html
     INDUSTRY_DATA.md
+    china_gva.py
+    CHINA_GVA.md
+    broad_sector_sources.py
+    broad_sectors.py
+    verify_broad_sectors.py
+    broad_sector_figures.py
+    broad_sector_site.py
+    verify_broad_site.py
+    broad-sectors.html
+    broad_sector_core.js
+    broad_sector_chart.js
+    test_broad_sector.js
+    BROAD_SECTORS.md
 ```
 
 The workflow is at [../../.github/workflows/update-world-rd-income.yml](../../.github/workflows/update-world-rd-income.yml) in this workspace. On GitHub's website, use **Add file → Create new file**, enter that exact `.github/workflows/update-world-rd-income.yml` path, paste its contents, and commit. Upload all source files shown under `figures/world-rd-income/` without flattening the folders. The public repository tracks source files; large generated `data/`, `output/` and `_site/` files are delivered through Pages and release assets. The refresh workflow generates them from fresh downloads.
@@ -99,6 +114,7 @@ Each successful deployment contains:
 
 - `index.html`: the standalone historical explorer with year/window controls, five views (including Sector × field and the scrolling Funding, performers & research dashboard), search, tooltips, dates, country tables and per-chart CSV/SVG exports.
 - `current_results.md`: current fixed-year statistics, coverage and captions.
+- `broad-sectors.html`: six-sector chart maker, alongside `broad_sector_gva.xlsx`, annual/component/classification/coverage CSVs, source manifest/inventory, verification reports, and PNG/SVG/PDF example figures. The research ZIP includes an offline root page with local download links.
 - `rd_nominal_annual.csv` and `rd_nominal_coverage.csv`: nominal R&D database and full economy-year coverage audit, with reported/derived status and explicit currencies.
 - `rd_sector_field_annual.csv`, `rd_sector_field_coverage.csv`, `rd_sector_field_reconciliation.csv`, `rd_sector_field_definitions.csv`: joint GERD database, coverage, accounting audit and definitions/flags. Source currency and base year are explicit; totals and combined groups overlap components.
 - `world_rd_income_data.xlsx`: the workbook, including annual nominal R&D, inputs, coverage and definitions.
@@ -144,7 +160,16 @@ python verify_basque.py
 python verify_breakdown.py
 node test_explorer.js --built
 node test_breakdown.js --built
+python industry_sources.py --refresh
+python industry_data.py
+python verify_industry.py
+python broad_sector_sources.py --refresh
+python broad_sectors.py
+python verify_broad_sectors.py
+node test_broad_sector.js --built
+python broad_sector_figures.py
 python build_site.py --destination ../../_site
+python verify_broad_site.py --site ../../_site
 ```
 
 Choose an empty destination for the final command. The packaged site's `index.html` can be opened locally; its chart remains self-contained. The ZIP download is a companion file. Running these commands locally validates the build; deployment and GitHub-specific configuration are verified by the first successful Actions run.

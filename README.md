@@ -4,6 +4,8 @@
 
 Explore worldwide R&D intensity, income, funding, performing sectors and research types over **2000–2025**, including Basque Country. Choose years, 3-/5-year averages or custom windows, compare historical positions, and download each chart as CSV or SVG.
 
+**[Create a six-sector GVA stacked chart](https://handysatria1.github.io/world-rd-income/broad-sectors.html):** select and reorder economies, choose latest/common/explicit years, and download PNG/SVG/CSV. Includes 80 economies plus Basque Country, the supplied SIC-based classification, totals, source years and an Excel workbook. [Methods](figures/world-rd-income/BROAD_SECTORS.md).
+
 - [Current complete research package](https://handysatria1.github.io/world-rd-income/world-rd-income.zip): exact source responses, provenance, data, workbook, figures, code and validation reports.
 - [Archived validated releases](https://github.com/handysatria1/world-rd-income/releases).
 - [Methodology and coverage](figures/world-rd-income/README.md).
@@ -44,7 +46,16 @@ python verify_basque.py
 python verify_breakdown.py
 node test_explorer.js --built
 node test_breakdown.js --built
+python industry_sources.py --refresh
+python industry_data.py
+python verify_industry.py
+python broad_sector_sources.py --refresh
+python broad_sectors.py
+python verify_broad_sectors.py
+node test_broad_sector.js --built
+python broad_sector_figures.py
 python build_site.py --destination ../../_site
+python verify_broad_site.py --site ../../_site
 ```
 
 Use an empty destination for packaging. For an exact archived vintage, extract its `world-rd-income.zip` and use its included code and raw inputs, omitting `download_data.py --refresh`. Missing observations, source flags, source vintages and reported-versus-derived distinctions are retained; country/region coverage varies by chart and year. Data attribution and source-specific licences are documented in the methodology and included source archives.

@@ -16,6 +16,8 @@ If you use this dashboard, code, derived datasets or figures, please cite:
 
 ## Interactive explorer
 
+**[Six-sector GVA chart maker](https://handysatria1.github.io/world-rd-income/broad-sectors.html):** select and reorder up to 16 economies, choose latest/common/explicit years, and export PNG/SVG/CSV or print/PDF. Uses the supplied SIC-based groups, OECD TiVA for 80 economies and Eustat A38 for Basque Country. [Methods, classification, provenance and reproduction](BROAD_SECTORS.md) · [Excel workbook](https://handysatria1.github.io/world-rd-income/broad_sector_gva.xlsx). The default example is Korea, Singapore, China, Basque Country, US and UK; each bar identifies its actual year.
+
 Open [world_rd_income_explorer.html](output/world_rd_income_explorer.html) in a browser. Data, styling and JavaScript are embedded in this single file, so it works offline without external libraries.
 
 - **Year snapshot:** choose a GDP year and one R&D year, a 3-/5-year window ending in your chosen year, or a custom range. Optionally require every R&D year. Switch nominal/PPP income and linear/logarithmic income axes.

@@ -13,6 +13,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from source_guide import build_source_guide
 from industry_site import build_industry_site, DOWNLOADS as INDUSTRY_DOWNLOADS
+from broad_sector_site import build_broad_sector_site, DOWNLOADS as BROAD_DOWNLOADS, FIGURES as BROAD_FIGURES
 
 ROOT = Path(__file__).resolve().parent
 
@@ -43,6 +44,7 @@ def build_site(destination: Path) -> None:
         raise ValueError(f"Use an empty site destination: {destination}")
     build_source_guide(destination, report["built_utc"])
     build_industry_site(destination, report["built_utc"])
+    build_broad_sector_site(destination)
 
     # Explicit package directories avoid publishing unrelated workspace material.
     files = [ROOT / name for name in (
@@ -51,6 +53,8 @@ def build_site(destination: Path) -> None:
         "CITATION.cff", "CITATION.bib",
         "source_guide.py", "data_sources.html",
         "industry_sources.py", "industry_data.py", "verify_industry.py", "industry_site.py", "industry.html", "INDUSTRY_DATA.md", "china_gva.py", "CHINA_GVA.md",
+        "broad_sector_sources.py", "broad_sectors.py", "verify_broad_sectors.py", "broad_sector_figures.py",
+        "broad_sector_site.py", "verify_broad_site.py", "broad-sectors.html", "broad_sector_core.js", "broad_sector_chart.js", "test_broad_sector.js", "BROAD_SECTORS.md",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
         "nominal_rd.py", "test_nominal_rd.py",
         "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",
@@ -66,7 +70,8 @@ def build_site(destination: Path) -> None:
         for name in ("CITATION.cff", "CITATION.bib"):
             archive.write(ROOT / name, "world-rd-income/" + name)
         for name in ("sources.html", "source_inventory.csv", "source_manifest.json",
-                     "industry_source_inventory.csv", "industry_source_manifest.json"):
+                     "industry_source_inventory.csv", "industry_source_manifest.json",
+                     "broad_sector_source_inventory.csv", "broad_sector_source_manifest.json"):
             archive.write(destination / name, "world-rd-income/" + name)
         # Keep the supplement's downloaded-data links usable after extracting the research ZIP.
         offline = (destination / "industry.html").read_text("utf-8")
@@ -77,6 +82,14 @@ def build_site(destination: Path) -> None:
         offline = offline.replace('href="index.html"', 'href="figures/world-rd-income/output/world_rd_income_explorer.html"')
         offline = offline.replace('<a href="world-rd-income.zip">Full reproducible research ZIP</a>', 'Full research package: this extracted directory')
         archive.writestr("world-rd-income/industry.html", offline)
+        offline = (destination / "broad-sectors.html").read_text("utf-8")
+        for name in BROAD_DOWNLOADS:
+            offline = offline.replace(f'href="{name}"', f'href="figures/world-rd-income/data/{name}"')
+        for name in BROAD_FIGURES:
+            offline = offline.replace(f'href="{name}"', f'href="figures/world-rd-income/output/{name}"')
+        offline = offline.replace('href="BROAD_SECTORS.md"', 'href="figures/world-rd-income/BROAD_SECTORS.md"')
+        offline = offline.replace('<a href="world-rd-income.zip">Full reproducible research ZIP</a>', 'Full research package: this extracted directory')
+        archive.writestr("world-rd-income/broad-sectors.html", offline)
         for name in ("update-world-rd-income.yml", "publish-world-rd-snapshot.yml"):
             workflow = ROOT.parents[1] / ".github" / "workflows" / name
             if workflow.exists():
@@ -103,6 +116,9 @@ def build_site(destination: Path) -> None:
             links.append(f'<a href="{filename}">{extension.upper()}</a>')
         chart_links.append(title + ": " + " / ".join(links))
     document = document.replace(marker, (
+        '<p><strong><a href="broad-sectors.html">Create a six-sector GVA stacked chart</a></strong> · '
+        'Choose economies and years; download PNG, SVG and CSV · '
+        '<a href="broad_sector_gva.xlsx">Broad-sector Excel workbook</a></p>'
         '<p><strong>New: <a href="industry.html">Medium/high-tech exports and ISIC two-digit value added</a></strong> · '
         '<a href="industry_exports_gva.xlsx">Companion Excel workbook</a> · '
         '<a href="industry_country_coverage.csv">Country coverage</a></p>'
@@ -133,6 +149,13 @@ def build_site(destination: Path) -> None:
         '<details><summary>Example stacked charts · 2020–2024</summary><p>' + '<br>'.join(chart_links) + '</p></details>'
     ))
     (destination / "index.html").write_text(document, encoding="utf-8")
+    offline = document.replace('<a href="world-rd-income.zip">Download this build: figures, Excel/CSV data, exact source responses, methodology and Python/JavaScript code (ZIP)</a>', 'Full research package: this extracted directory')
+    for folder in ("data", "output"):
+        for path in (ROOT / folder).iterdir():
+            if path.is_file():
+                offline = offline.replace(f'href="{path.name}"', f'href="figures/world-rd-income/{folder}/{path.name}"')
+    with ZipFile(destination / "world-rd-income.zip", "a", ZIP_DEFLATED) as archive:
+        archive.writestr("world-rd-income/index.html", offline)
     (destination / ".nojekyll").touch()
     print(f"Website ready: {destination / 'index.html'}")
 
