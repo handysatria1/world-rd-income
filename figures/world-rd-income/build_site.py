@@ -1,0 +1,118 @@
+"""Package an already regenerated, validated chart for GitHub Pages.
+
+python build_site.py --destination ../../_site
+The destination must be empty. No download or calculation occurs here.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
+
+ROOT = Path(__file__).resolve().parent
+
+
+def build_site(destination: Path) -> None:
+    report = json.loads((ROOT / "data" / "validation_report.json").read_text("utf-8"))
+    assert report["validation"] and all(value == "passed" for value in report["validation"].values())
+    history_report = json.loads((ROOT / "data" / "explorer_validation.json").read_text("utf-8"))
+    assert history_report["built_utc"] == report["built_utc"]
+    assert all(value == "passed" for value in history_report["validation"].values())
+    assert "nominal_rd" in history_report
+    assert "sector_field_gerd" in history_report
+    sector_report = json.loads((ROOT / "data" / "sector_field_validation.json").read_text("utf-8"))
+    assert sector_report["built_utc"] == report["built_utc"]
+    assert all(value == "passed" for value in sector_report["validation"].values())
+    basque_report = json.loads((ROOT / "data" / "basque_validation.json").read_text("utf-8"))
+    assert basque_report["built_utc"] == report["built_utc"]
+    assert all(value == "passed" for value in basque_report["validation"].values())
+    breakdown_report = json.loads((ROOT / "data" / "breakdown_validation.json").read_text("utf-8"))
+    assert breakdown_report["built_utc"] == report["built_utc"]
+    assert all(value == "passed" for value in breakdown_report["validation"].values())
+    document = (ROOT / "output" / "world_rd_income_explorer.html").read_text("utf-8")
+    assert report["built_utc"] in document, "Rebuild the chart and report together before publishing"
+    marker = "<!-- published-downloads -->"
+    assert document.count(marker) == 1
+    destination.mkdir(parents=True, exist_ok=True)
+    if any(destination.iterdir()):
+        raise ValueError(f"Use an empty site destination: {destination}")
+
+    # Explicit package directories avoid publishing unrelated workspace material.
+    files = [ROOT / name for name in (
+        "download_data.py", "reproduce_figures.py", "build_site.py",
+        "requirements.txt", "README.md", "AUTOMATION.md", "OFFICIAL_DATA.md", "historical_explorer.py",
+        "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
+        "nominal_rd.py", "test_nominal_rd.py",
+        "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",
+        "basque_sources.py", "basque_rd.py", "verify_basque.py",
+        "breakdown_sources.py", "breakdown_rd.py", "breakdown_figures.py", "breakdown_core.js",
+        "test_breakdown.js", "verify_breakdown.py", "official_sources.py", "official_rd.py",
+    )]
+    files += [p for p in (ROOT / "data").rglob("*") if p.is_file() and p.suffix in {".json", ".csv", ".xml", ".xlsx", ".md", ".html", ".zip", ".px"}]
+    files += [p for p in (ROOT / "output").iterdir() if p.is_file() and p.suffix in {".html", ".png", ".svg", ".pdf"}]
+    with ZipFile(destination / "world-rd-income.zip", "w", ZIP_DEFLATED) as archive:
+        for path in sorted(files):
+            archive.write(path, "world-rd-income/figures/world-rd-income/" + path.relative_to(ROOT).as_posix())
+        for name in ("update-world-rd-income.yml", "publish-world-rd-snapshot.yml"):
+            workflow = ROOT.parents[1] / ".github" / "workflows" / name
+            if workflow.exists():
+                archive.write(workflow, "world-rd-income/.github/workflows/" + name)
+    (destination / "current_results.md").write_bytes((ROOT / "data" / "current_results.md").read_bytes())
+    for name in ["rd_nominal_annual.csv", "rd_nominal_coverage.csv", "world_rd_income_data.xlsx", "basque_annual.csv",
+                 "rd_sector_field_annual.csv", "rd_sector_field_coverage.csv", "rd_sector_field_reconciliation.csv", "rd_sector_field_definitions.csv",
+                 "rd_breakdown_annual.csv", "rd_breakdown_coverage.csv", "rd_breakdown_reconciliation.csv", "rd_breakdown_definitions.csv",
+                 "rd_breakdown_conversion.csv", "rd_breakdown_examples.csv", "rd_official_conversion.csv",
+                 "rd_research_oecd_alternatives.csv", "rd_ons_funding_reported.csv", "rd_ons_intensity.csv", "rd_ons_funding_comparison.csv"]:
+        (destination / name).write_bytes((ROOT / "data" / name).read_bytes())
+    chart_links = []
+    for name, title in [("rd_funding_intensity_2020_2024", "Funding + intensity"),
+                        ("rd_performer_intensity_2020_2024", "Performing sectors + intensity"),
+                        ("rd_performer_composition_2020_2024", "Performing-sector percentages"),
+                        ("rd_funding_performer_composition_2020_2024", "Funding and performer composition"),
+                        ("rd_research_type_composition_2020_2024", "Government/business research types")]:
+        links = []
+        for extension in ["png", "svg", "pdf"]:
+            filename = name + "." + extension
+            (destination / filename).write_bytes((ROOT / "output" / filename).read_bytes())
+            links.append(f'<a href="{filename}">{extension.upper()}</a>')
+        chart_links.append(title + ": " + " / ".join(links))
+    document = document.replace(marker, (
+        '<p><a href="world-rd-income.zip">Download this build: figures, Excel/CSV data, '
+        'exact source responses, methodology and Python/JavaScript code (ZIP)</a> · '
+        '<a href="current_results.md">Current results and updated captions</a><br>'
+        '<a href="rd_nominal_annual.csv">Nominal R&amp;D database (CSV)</a> · '
+        '<a href="rd_nominal_coverage.csv">Nominal R&amp;D coverage (CSV)</a> · '
+        '<a href="world_rd_income_data.xlsx">Excel workbook</a><br>'
+        '<a href="rd_sector_field_annual.csv">GERD sector × field database (CSV)</a> · '
+        '<a href="rd_sector_field_coverage.csv">Coverage</a> · '
+        '<a href="rd_sector_field_reconciliation.csv">Reconciliation audit</a> · '
+        '<a href="rd_sector_field_definitions.csv">Definitions and flags</a><br>'
+        '<a href="basque_annual.csv">Basque Country: annual data and EUR/USD/PPP conversion inputs (CSV)</a><br>'
+        '<a href="rd_breakdown_annual.csv">Funding and research-type database (CSV)</a> · '
+        '<a href="rd_breakdown_coverage.csv">Coverage</a> · '
+        '<a href="rd_breakdown_reconciliation.csv">Reconciliation</a> · '
+        '<a href="rd_breakdown_definitions.csv">Definitions</a> · '
+        '<a href="rd_breakdown_conversion.csv">Basque constant-price proxy inputs</a> · '
+        '<a href="rd_breakdown_examples.csv">Example chart values</a></p>'
+        '<p>Direct official-source checks: <a href="rd_ons_funding_reported.csv">ONS funding/performance</a> · '
+        '<a href="rd_ons_funding_comparison.csv">ONS–OECD comparison audit</a> · '
+        '<a href="rd_ons_intensity.csv">ONS intensity</a> · <a href="rd_official_conversion.csv">UK PPP conversion inputs</a> · '
+        '<a href="rd_research_oecd_alternatives.csv">Preserved OECD UK research estimates</a></p>'
+        '<details><summary>Example stacked charts · 2020–2024</summary><p>' + '<br>'.join(chart_links) + '</p></details>'
+    ))
+    (destination / "index.html").write_text(document, encoding="utf-8")
+    (destination / ".nojekyll").touch()
+    print(f"Website ready: {destination / 'index.html'}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--destination", type=Path, required=True)
+    args = parser.parse_args()
+    build_site(args.destination.resolve())
+
+
+if __name__ == "__main__":
+    main()

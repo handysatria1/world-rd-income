@@ -1,0 +1,63 @@
+name: Publish validated R&D snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release containing the validated pages-site.zip'
+        required: true
+        type: string
+      sha256:
+        description: 'Expected SHA-256 of pages-site.zip (from the release notes)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pages: read
+
+concurrency:
+  group: world-rd-income-pages
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Download and verify the archived website
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SNAPSHOT_RELEASE: ${{ inputs.release_tag }}
+          SNAPSHOT_SHA256: ${{ inputs.sha256 }}
+        run: |
+          [[ "$SNAPSHOT_SHA256" =~ ^[a-fA-F0-9]{64}$ ]]
+          gh release download "$SNAPSHOT_RELEASE" --repo "$GH_REPO" \
+            --pattern pages-site.zip --dir "$RUNNER_TEMP/validated-site"
+          printf '%s  %s\n' "$SNAPSHOT_SHA256" "$RUNNER_TEMP/validated-site/pages-site.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/validated-site/pages-site.zip" -d "$GITHUB_WORKSPACE/_site"
+          test -s "$GITHUB_WORKSPACE/_site/index.html"
+          test -s "$GITHUB_WORKSPACE/_site/world-rd-income.zip"
+      - name: Upload validated website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

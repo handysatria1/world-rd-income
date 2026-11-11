@@ -1,0 +1,90 @@
+name: Update worldwide R&D charts
+
+on:
+  schedule:
+    # Mondays at 06:23 UTC; avoid the busiest start-of-hour period.
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/update-world-rd-income.yml'
+      - 'figures/world-rd-income/**'
+
+permissions:
+  contents: read
+  pages: read
+
+concurrency:
+  group: world-rd-income-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Scheduled/manual/push publications always use the repository's default branch.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: figures/world-rd-income
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: figures/world-rd-income/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Set up JavaScript verification
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Check interactive calculations
+        run: |
+          node test_explorer.js
+          node test_breakdown.js
+      - name: Check R&D units, annual joins and sector-field accounting
+        run: python -m unittest test_nominal_rd.py test_sector_field_rd.py
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Refresh OECD, World Bank, UNESCO, Eustat and ONS data
+        run: python download_data.py --refresh
+      - name: Recalculate and validate all figures
+        run: python reproduce_figures.py
+      - name: Independently verify sector-field database and workbook
+        run: python verify_sector_field.py
+      - name: Independently verify Basque conversions and all four views
+        run: |
+          python verify_basque.py
+          node test_explorer.js --built
+      - name: Independently verify funding, research types and stacked charts
+        run: |
+          python verify_breakdown.py
+          node test_breakdown.js --built
+      - name: Prepare website and reproducible download
+        run: python build_site.py --destination "$GITHUB_WORKSPACE/_site"
+      - name: Add current results to run summary
+        run: cat data/current_results.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload validated website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

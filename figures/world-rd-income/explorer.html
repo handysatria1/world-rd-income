@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Worldwide R&amp;D and income explorer</title>
+<style>__EXPLORER_CSS__</style>
+</head>
+<body><main>
+<header><p class="eyebrow">WORLDWIDE DATA · 2000–2025</p>
+<h1>R&amp;D and income, across time</h1>
+<p class="intro">Choose your years. Compare country positions. Explore the history behind each point.</p>
+<p id="refresh-status" class="metadata"></p></header>
+<!-- published-downloads -->
+<nav class="tabs" aria-label="Chart view">
+<button type="button" data-view="snapshot" aria-pressed="true">Year snapshot</button>
+<button type="button" data-view="compare" aria-pressed="false">Compare positions</button>
+<button type="button" data-view="history" aria-pressed="false">Country history</button>
+<button type="button" data-view="sector" aria-pressed="false">Sector × field</button>
+<button type="button" data-view="breakdown" aria-pressed="false">Funding, performers &amp; research</button>
+</nav>
+<section class="controls" aria-label="Chart controls">
+<div class="control-row">
+<label>Income measure<select id="metric"><option value="nominal">Current US dollars</option><option value="ppp">PPP · current international dollars</option></select></label>
+<label id="gdp-year-control">GDP year<select id="gdpYear"></select></label>
+<label class="range-control" hidden>From GDP year<select id="fromYear"></select></label>
+<label class="range-control" hidden>To GDP year<select id="toYear"></select></label>
+<label id="scale-control">Income axis<select id="scale"><option value="linear">Linear</option><option value="log">Logarithmic</option></select></label>
+<label id="sector-year-control" hidden>GERD year<select id="sectorYear"></select></label>
+<label id="gerd-basis-control" hidden>GERD unit and prices<select id="gerdBasis"></select></label>
+</div>
+<div id="breakdown-controls" hidden>
+<p class="dashboard-intro"><strong>All charts, one scroll.</strong> Funding sources pay for R&amp;D; performing sectors carry it out. The controls below update every chart.</p>
+<div class="control-row">
+<label>Expenditure prices<select id="breakdownBasis"></select></label>
+<label>Additional research performer<select id="breakdownSector"><option value="">Government + business already shown</option><option value="HES">Higher education</option><option value="PNP">Private non-profit</option><option value="_T">All performers</option></select></label>
+<label id="share-method-control">Composition averaging<select id="shareMode"><option value="ratio">Ratio of summed amounts</option><option value="annual">Mean annual shares</option></select></label>
+</div>
+<div class="checks"><label><input id="breakdownPercentages" type="checkbox" checked> Show sector percentages where they fit</label></div>
+<fieldset><legend>Economies to compare · selected order follows the list</legend><div id="breakdown-countries" class="breakdown-countries"></div>
+<div class="control-row"><label>Add economy<select id="breakdownAdd"></select></label><button id="breakdown-add" type="button">Add</button><button id="breakdown-examples" class="secondary" type="button">Example six economies</button></div></fieldset>
+</div>
+<fieldset id="rd-controls"><legend>R&amp;D window</legend>
+<div class="control-row">
+<label>Average over<select id="rdMode"><option value="1">One specific year</option><option value="3">3 years</option><option value="5" selected>5 years</option><option value="custom">Custom year range</option></select></label>
+<label id="rd-start-control" hidden>First R&amp;D year<select id="rdStart"></select></label>
+<label>Last R&amp;D year<select id="rdEnd"></select></label>
+<label id="timing-control" hidden>Earlier comparison R&amp;D<select id="timing"><option value="aligned">Shift window with GDP year</option><option value="fixed">Use the same R&amp;D window</option></select></label>
+</div>
+<div class="checks"><label><input id="strict" type="checkbox"> Require every R&amp;D year in the window</label>
+<label><input id="labels" type="checkbox" checked> Country names where space permits</label></div>
+</fieldset>
+<div class="control-row country-controls">
+<label>Find an economy<input id="search" type="search" placeholder="Country name or code" autocomplete="off"></label>
+<label>Economy / inspect<select id="country"><option value="">Choose an economy</option></select></label>
+<button id="history-button" type="button">Show its history</button>
+<button id="example" type="button" class="secondary">Compare 2010 → 2025</button>
+<button id="reset" type="button" class="secondary">Reset</button>
+</div>
+</section>
+<p id="error" role="alert" hidden></p>
+<section id="single-chart" class="chart-card" aria-label="Chart results">
+<div class="chart-heading"><div><h2 id="chart-title"></h2><p id="selection-description"></p></div><div><button id="export-svg" class="secondary" type="button" hidden>Download chart SVG</button> <button id="export" class="secondary" type="button">Download plotted CSV</button></div></div>
+<div id="stats" class="stats" aria-live="polite"></div>
+<div id="legend" class="legend"></div>
+<div id="charts"></div>
+<p id="coverage-note" class="metadata"></p>
+</section>
+<section id="breakdown-dashboard" aria-label="Funding, performing sectors and research dashboard" hidden>
+<nav class="dashboard-jumps" aria-label="Jump to chart group"><a href="#breakdown-funding_amount">Funding sources ↓</a><a href="#breakdown-performer_amount">Performing sectors ↓</a><a href="#breakdown-research_gov_share">Research types ↓</a></nav>
+<div id="breakdown-panels"></div>
+</section>
+<template id="breakdown-panel-template">
+<section class="chart-card breakdown-panel">
+<div class="chart-heading"><div><h2 data-role="chart-title"></h2><p data-role="selection-description"></p></div><div class="panel-downloads"><button data-role="export-svg" class="secondary" type="button">Download chart SVG</button><button data-role="export" class="secondary" type="button">Download plotted CSV</button></div></div>
+<p data-role="error" role="alert" hidden></p>
+<div data-role="stats" class="stats"></div><div data-role="legend" class="legend"></div>
+<div data-role="charts"></div>
+<p data-role="percentage-note" class="metadata"></p>
+<p data-role="inspector" class="inspector" aria-live="polite"></p>
+<details><summary>All sector percentages and plotted data</summary><p data-role="table-description" class="metadata"></p><div class="table-scroll"><table data-role="data-table"><thead></thead><tbody></tbody></table></div></details>
+<details><summary>Coverage, sources and accounting differences</summary><p data-role="coverage-note" class="metadata breakdown-note"></p></details>
+</section>
+</template>
+<aside id="inspector" class="inspector" aria-live="polite">Hover over or click a point to inspect its values, reporting years and source.</aside>
+<p class="method-note"><strong>Reading changes over time:</strong> income is in current prices. Changes include inflation and exchange-rate/PPP effects; they are not a measure of real economic growth. Scatterplots show GERD as a percentage of GDP; Sector × field shows expenditure amounts on the selected unit/price basis. Missing values are never replaced by zero or carried forward.</p>
+<details class="methodology"><summary>Methods, coverage and how comparisons work</summary>
+<p>Snapshots use the mean of available annual R&amp;D observations in your window. Choose complete coverage to require every requested year. One R&amp;D provider is selected per economy by most available years, preferring OECD MSTI on ties; providers are never spliced within a window. Other providers are UNESCO UIS via World Bank WDI and Eustat for Basque Country.</p>
+<p>Country scatterplots require both nominal and PPP income, so switching the income measure uses the same economies. Comparisons require data at both endpoints and fit each endpoint on that common sample. A single R&amp;D provider is chosen using coverage across the union of the two windows, preventing source-switch artefacts. This choice can differ from a stand-alone snapshot.</p>
+<p>“Shift window” preserves the gap between the last R&amp;D year and the later GDP year. For example, 2020–2024 R&amp;D against 2025 GDP becomes 2005–2009 R&amp;D against 2010 GDP. “Same window” holds R&amp;D fixed and shows income movement only.</p>
+<p>Country history shows actual annual observations and uses one R&amp;D provider for the displayed history. Lines break across missing years. Country catalog and source vintages are those of the downloaded snapshot; historical data are latest-vintage revisions, not what was known at the time.</p>
+<p><strong>Nominal R&amp;D database:</strong> OECD MSTI reported GERD in current national currency is retained and converted from millions to units. Current-US-dollar totals are <strong>derived</strong> as annual GERD/GDP (%) / 100 × same-year World Bank total GDP (NY.GDP.MKTP.CD). Separate estimates use OECD, UNESCO via WDI, and direct UNESCO UIS shares; these can reuse the same underlying observations. Country history charts the estimate corresponding to its displayed R&amp;D provider. GDP denominators and vintages may differ between providers, so these estimates need not equal reported national totals. No PPP conversion, per-capita GDP or multi-year mean is used in this calculation. Missing same-year inputs produce missing amounts. Source-level annual data, input values, flags and coverage are in the downloadable database and workbook.</p>
+<p>The equally weighted fit is R&amp;D = a + b ln(GDP per capita). Year, window and coverage controls recalculate it; search and country highlighting do not refit it. Association is not causation. If there are too few observations or no variation, no regression is shown. All country points and names use teal; names use normal font weight.</p>
+<p><strong>Basque Country (ES-PV):</strong> the Basque Autonomous Community is a region of Spain, shown in all four views and excluded from country regressions because it overlaps Spain. Eustat reports R&amp;D in thousand EUR, GDP in thousand EUR and GDP/person in EUR. Intensity is derived as same-year expenditure / GDP × 100 using the archived GDP vintage. Current US$ = EUR / Spain's annual EUR-per-US$ exchange rate (WDI PA.NUS.FCRF). Current international dollars = EUR / Spain's annual GDP PPP factor (PA.NUS.PPP): a <strong>national PPP proxy</strong>, not a regional price survey or R&amp;D-specific PPP. Reported EUR and derived USD/PPP amounts remain separate. No missing conversion factor is carried forward. The Basque annual download contains all inputs, methods and source links. GDP/person advance flags are taken from Eustat's display table.</p>
+<p><strong>Sector × field:</strong> the OECD RDS dataflow <code>DSD_RDS_GERD@DF_GERD_FORD</code> jointly classifies GERD by the sector performing the R&amp;D and its field. Choose a country, year and unit/price basis. National currency at current prices, current PPP dollars and constant-price PPP dollars are separate representations; PPP dollars are not US dollars at market exchange rates. Matrix values are in millions; CSV/database values are in units. Source currency, base year, scale and all status/confidentiality flags are retained. A confidential cell (C), included-elsewhere cell (I), explicit missing value (M) or absent row (—) is not zero. Totals and combined fields overlap their components and must not be summed together. “Natural sciences and engineering” (FORD_1T4) contains fields 1–4, including medical and agricultural sciences; FORD_5_6 contains social sciences and humanities/arts. Source totals are never reconstructed. The downloadable reconciliation audit records discrepancies and incomplete partitions. Country coverage is independent of income availability.</p>
+<p><strong>Eustat sector × field:</strong> official tables separately provide all performers, companies + private non-profit institutions (BES_PNP), government and higher education, jointly classified into five scientific fields plus total. The combined business/PNPI sector is not labelled BES alone. Eustat's “Social sciences” table grouping is retained separately (EUSTAT_SOC); no separate humanities or NEC amounts are inferred. Reconciliation uses Eustat's own disjoint partitions. Current EUR, derived market-rate USD and derived current PPP amounts are available; no constant-price Basque series is inferred. Original EUR values, missing symbols and conversion factors are retained in cell exports.</p>
+<p id="source-details"></p>
+<p><strong>Funding &amp; research type:</strong> OECD RDS <code>DF_GERD_SOF</code> records performer × funding source; <code>DF_GERD_TORD</code> records performer × research type. These do not identify funding source × research type. GOV in the research chart means government-performed R&amp;D. Bars use the intersection of the reported total's years and all categories with any numeric observations in the requested window. Each economy's actual years are shown. The complete-years checkbox requires every requested year, but does not imply complete categories. Default shares are ratios of summed amounts; “Mean annual shares” instead averages each year's category/total percentage. Known segments are never rescaled to 100%. Grey is the derived difference between the reported total and known categories, not an observed category. Negative differences are retained in exports. Separate capital expenditure is retained in the research-type chart.</p>
+<p>Intensity overlays average annual GERD/GDP over exactly the bar years using one provider, and disappear if any of those years is unavailable. The intensity source can differ from the expenditure source. Basque funding comes from Eustat; business and private non-profit performers remain combined. No Basque basic/applied/experimental data were identified in the accessed Eustat tables. In this view only, constant-2020 PPP Basque amounts are derived by applying the same-year ratio of OECD Spain's constant-2020 PPP GERD to its current-EUR GERD. This is an <strong>implied Spanish national conversion proxy</strong>, conditional on rounded source inputs, not a Basque price index. Inputs and flags are archived in the regional conversion CSV. Current PPP conversions use WDI Spain PPP instead and can differ in vintage/method.</p>
+</details>
+<section id="single-table" class="table-card"><h2 id="table-title">Plotted data</h2><p id="table-description" class="metadata"></p><div class="table-scroll"><table id="data-table"><thead></thead><tbody></tbody></table></div></section>
+<details id="audit-section" class="table-card"><summary id="audit-title">Coverage and exclusions</summary><div class="table-scroll"><table id="audit-table"><thead><tr><th>Economy</th><th>Code</th><th>Exclusion reason</th></tr></thead><tbody></tbody></table></div></details>
+<footer>OECD MSTI / RDS · UNESCO UIS / World Bank WDI · Eustat · All data and code are embedded for offline exploration.</footer>
+</main><div id="tooltip" role="tooltip" hidden></div>
+<script type="application/json" id="history-data">__EXPLORER_DATA__</script>
+<script>__EXPLORER_CORE__</script>
+<script>__BREAKDOWN_CORE__</script>
+<script>__EXPLORER_JS__</script>
+</body></html>
