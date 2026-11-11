@@ -16,6 +16,8 @@ If you use this dashboard, code, derived datasets or figures, please cite:
 
 ## Interactive explorer
 
+**[Industry R&D and the economy](https://handysatria1.github.io/world-rd-income/rd-industry.html):** six-group BERD classification combined with same-year GVA, employment, productivity, goods exports, GERD and income. Six interactive layouts; partial groups, unallocated R&D and Basque companies + PNPI scope are explicit. [Methods and reproduction](RD_INDUSTRY.md) · [Combined Excel workbook](https://handysatria1.github.io/world-rd-income/rd_industry_economy.xlsx).
+
 **[Employment, productivity and goods-export chart maker](https://handysatria1.github.io/world-rd-income/sector-economy.html):** five layouts matching the employment stacks, GVA/employment comparisons, sector/economy productivity panels and export composition examples. Select/reorder economies and years; download PNG/SVG/CSV, print/PDF or the full [Excel workbook](https://handysatria1.github.io/world-rd-income/sector_economy.xlsx). Examples use 2022 employment/productivity and 2024 exports. [Sources, exact mappings, nominal-productivity interpretation and reproduction](SECTOR_ECONOMY.md).
 
 **[Six-sector GVA chart maker](https://handysatria1.github.io/world-rd-income/broad-sectors.html):** select and reorder up to 16 economies, choose latest/common/explicit years, and export PNG/SVG/CSV or print/PDF. Uses the supplied SIC-based groups, OECD TiVA for 80 economies and Eustat A38 for Basque Country. [Methods, classification, provenance and reproduction](BROAD_SECTORS.md) · [Excel workbook](https://handysatria1.github.io/world-rd-income/broad_sector_gva.xlsx). The default example is Korea, Singapore, China, Basque Country, US and UK; each bar identifies its actual year.
