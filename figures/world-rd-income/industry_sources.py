@@ -3,13 +3,16 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from xml.etree import ElementTree as ET
+from zipfile import ZipFile
 
 from download_data import download
+from china_gva import CHINA_SOURCES, obtain_nbs
 
 ROOT = Path(__file__).resolve().parent
 RAW = ROOT / 'data' / 'industry_raw'
@@ -28,6 +31,7 @@ SOURCES = {
     'oecd_stan_history.csv': f'{OECD}/data/OECD.STI.PIE,DSD_STAN@DF_STAN_2025,1.0/A...B1G.V.XDC?startPeriod={START}&endPeriod={END}&format=csvfile',
     'unido_indstat_metadata.json': f'{UNIDO}/dataset/getDataset/INDSTAT/4',
     'unido_api_schema.json': f'{UNIDO}/v3/api-docs/api',
+    **CHINA_SOURCES,
 }
 
 
@@ -40,6 +44,13 @@ def validate(name, body):
         assert ET.fromstring(body).find('.//{*}DataStructure') is not None
     elif name.endswith('.csv'):
         assert body.lstrip(b'\xef\xbb\xbf').startswith(b'DATAFLOW,') and b'OBS_VALUE' in body.splitlines()[0]
+    elif name.endswith('.pdf'):
+        assert body.startswith(b'%PDF-')
+    elif name.endswith('.xlsx'):
+        with ZipFile(io.BytesIO(body)) as archive:
+            assert 'xl/workbook.xml' in archive.namelist() and archive.testzip() is None
+    elif name.startswith('nbs_'):
+        assert json.loads(body)['success']
     elif name == 'unido_indstat_metadata.json':
         data = json.loads(body)
         assert data['id'] and data['countries'] and data['activities'] and data['periods']
@@ -61,6 +72,10 @@ def refresh_inputs(refresh=False, import_cache: Path | None = None):
     pending, manifest = {}, {}
 
     def obtain(name, url, query=None):
+        if name in manifest:
+            info = manifest[name]
+            assert info['url'] == url
+            return pending.get(name) or (RAW / name).read_bytes()
         if not refresh and name in old:
             body = (RAW / name).read_bytes()
             info = old[name]
@@ -83,6 +98,7 @@ def refresh_inputs(refresh=False, import_cache: Path | None = None):
     # Conservative concurrency for official services. Promotion follows complete validation.
     with ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(lambda item: obtain(*item), SOURCES.items()))
+    obtain_nbs(obtain)
     meta = json.loads(pending.get('unido_indstat_metadata.json') or (RAW / 'unido_indstat_metadata.json').read_bytes())
     activities = sorted(a['c'] for a in meta['activities'] if re.fullmatch(r'\d{2}', a['c']))
     periods = [p for p in meta['periods'] if START <= int(p) <= END]

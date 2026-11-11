@@ -12,11 +12,13 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 from openpyxl import Workbook
+from china_gva import nbs_value_added
 from industry_sources import ROOT, RAW, START, END, INDICATOR
 
 DATA = ROOT / 'data'
 SOURCE_NAMES = {'OECD_NA': 'OECD annual national accounts, Table 6',
-                'OECD_STAN': 'OECD STAN 2025', 'UNIDO_INDSTAT': 'UNIDO INDSTAT Rev.4'}
+                'OECD_STAN': 'OECD STAN 2025', 'UNIDO_INDSTAT': 'UNIDO INDSTAT Rev.4',
+                'OECD_TIVA_CHN': 'OECD TiVA 2025 (China selection)'}
 ALIASES = {'D': '35', 'L': '68', 'O': '84', 'P': '85', 'U': '99'}
 
 
@@ -131,18 +133,25 @@ def build():
             metadata.append({'source': source, 'iso3': iso, 'level': level, 'key': str(key),
                              'note_class': n['noteClass'], 'note': n['note'], 'source_file': file})
 
-    for source, stem in [('OECD_NA', 'oecd_gva'), ('OECD_STAN', 'oecd_stan')]:
-        codes = codelists(stem + '_structure.xml')
-        for category in ['CL_ACTIVITY_ISIC4', 'CL_OBS_STATUS', 'CL_CONF_STATUS', 'CL_UNIT_MULT', 'CL_PRICES']:
+    for source, stem in [('OECD_NA', 'oecd_gva'), ('OECD_STAN', 'oecd_stan'), ('OECD_TIVA_CHN', 'oecd_tiva')]:
+        tiva = source == 'OECD_TIVA_CHN'
+        structure = 'oecd_tiva_structure_resolved.xml' if tiva else stem + '_structure.xml'
+        file = 'oecd_tiva_china_valu.csv' if tiva else stem + '_history.csv'
+        codes = codelists(structure)
+        for category in ['CL_ACTIVITY_ISIC4', 'CL_OBS_STATUS', 'CL_CONF_STATUS', 'CL_UNIT_MULT', 'CL_PRICES', 'CL_TIVA_MEASURE']:
             for code, text in codes.get(category, {}).items():
                 definitions.append({'source': source, 'dimension': category, 'code': code, 'label': text,
-                                    'source_file': stem + '_structure.xml'})
+                                    'source_file': structure})
         for section, division in ALIASES.items():
             assert codes['CL_ACTIVITY_ISIC4'][section] == codes['CL_ACTIVITY_ISIC4'][section + division]
         seen = set()
-        for i, r in enumerate(read_csv(RAW / (stem + '_history.csv')), 1):
-            assert r['FREQ'] == 'A' and r['UNIT_MEASURE'] == 'XDC' and r['PRICE_BASE'] == 'V'
-            assert r.get('TRANSACTION', r.get('MEASURE')) == 'B1G'
+        for i, r in enumerate(read_csv(RAW / file), 1):
+            assert r['FREQ'] == 'A'
+            if tiva:
+                assert all(r[k] == v for k, v in {'UNIT_MEASURE': 'USD', 'MEASURE': 'VALU', 'REF_AREA': 'CHN', 'COUNTERPART_AREA': 'W'}.items())
+            else:
+                assert r['UNIT_MEASURE'] == 'XDC' and r['PRICE_BASE'] == 'V'
+                assert r.get('TRANSACTION', r.get('MEASURE')) == 'B1G'
             if source == 'OECD_NA':
                 assert all(r[k] == v for k, v in {'SECTOR': 'S1', 'COUNTERPART_SECTOR': 'S1', 'INSTR_ASSET': '_Z',
                            'EXPENDITURE': '_Z', 'TRANSFORMATION': 'N', 'TABLE_IDENTIFIER': 'T0301'}.items())
@@ -159,13 +168,16 @@ def build():
                         'activity_code': code, 'activity_label': codes['CL_ACTIVITY_ISIC4'][code],
                         'isic_revision': '4', 'isic_division': division, 'division_mapping': mapping,
                         'value_reported': value, 'unit_multiplier': exponent,
-                        'value_national_currency': None if value is None else value * 10 ** exponent,
-                        'value_usd_provider': None, 'currency_code': r.get('CURRENCY', ''), 'currency_label_provider': '',
-                        'price_basis': 'current prices', 'measure_code': 'B1G', 'valuation': 'B1G; see source national-accounts metadata',
+                        'value_national_currency': None if tiva or value is None else value * 10 ** exponent,
+                        'value_usd_provider': value * 10 ** exponent if tiva and value is not None else None,
+                        'currency_code': 'USD' if tiva else r.get('CURRENCY', ''), 'currency_label_provider': '',
+                        'price_basis': 'current prices', 'measure_code': 'VALU' if tiva else 'B1G',
+                        'valuation': 'basic prices; OECD ICIO ReadMe Structure sheet' if tiva else 'B1G; see source national-accounts metadata',
                         'obs_status': r.get('OBS_STATUS', ''), 'conf_status': r.get('CONF_STATUS', ''),
-                        'est_method': r.get('EST_METHOD', ''), 'combination_code': '', 'combination_note': '',
+                        'est_method': 'OECD ICIO harmonised and balanced estimates' if tiva else r.get('EST_METHOD', ''),
+                        'combination_code': '', 'combination_note': '',
                         'value_status': 'reported' if value is not None else 'missing',
-                        'source_file': stem + '_history.csv', 'raw_record': i})
+                        'source_file': file, 'raw_record': i})
 
     for country in unido['countries']:
         iso = country['iso3']
@@ -228,8 +240,8 @@ def build():
                                  'nonzero_divisions': len(nonzero), 'missing_value_records': len(rows) - len(numeric),
                                  'section_equivalents': sum(r['division_mapping'] == 'single_division_section_equivalent' for r in numeric),
                                  'division_codes': ';'.join(sorted(r['isic_division'] for r in numeric)),
-                                 'coverage_status': 'some_divisions_available' if numeric else 'no_numeric_divisions',
-                                 'scope': 'industrial establishments; B-E only' if source == 'UNIDO_INDSTAT' else 'national accounts; activity availability varies'})
+                                  'coverage_status': 'not_requested_for_this_source' if source == 'OECD_TIVA_CHN' and iso != 'CHN' else 'some_divisions_available' if numeric else 'no_numeric_divisions',
+                                  'scope': 'industrial establishments; B-E only' if source == 'UNIDO_INDSTAT' else 'ICIO-based estimates; China-only selection; mixed activity detail' if source == 'OECD_TIVA_CHN' else 'national accounts; activity availability varies'})
             overview_row[source + '_latest_year'] = years_available[-1][0] if years_available else None
             overview_row[source + '_divisions_latest'] = years_available[-1][1] if years_available else 0
             overview_row[source + '_first_year'] = years_available[0][0] if years_available else None
@@ -247,10 +259,12 @@ def build():
                          'mht_exports_latest_year': latest['export_latest_year'], 'mht_exports_latest_percent': latest['export_latest_percent'],
                          'rd_income_build_utc': history['builtUTC']})
 
+    nbs = nbs_value_added(RAW)
     outputs = {'mht_exports_annual.csv': export_rows, 'rd_income_exports_annual.csv': annual_join,
                'rd_income_exports_snapshot.csv': snapshot, 'gva_isic2.csv': divisions,
                'gva_other_activities.csv': others, 'gva_country_year_coverage.csv': coverage,
-               'industry_country_coverage.csv': overview, 'gva_metadata.csv': metadata, 'gva_definitions.csv': definitions}
+               'industry_country_coverage.csv': overview, 'gva_metadata.csv': metadata, 'gva_definitions.csv': definitions,
+               'china_nbs_io_value_added.csv': nbs}
     for name, rows in outputs.items():
         write_csv(name, rows)
     workbook = Workbook(write_only=True)
@@ -265,7 +279,7 @@ def build():
     latest_years = {(r['iso3'], s): r[s + '_latest_year'] for r in overview for s in SOURCE_NAMES}
     latest_gva = [r for r in divisions if r['year'] == latest_years[r['iso3'], r['source']]]
     view = {'countries': overview, 'exports': export_rows, 'gva': latest_gva, 'sourceNames': SOURCE_NAMES,
-            'rdIncomeBuildUTC': history['builtUTC']}
+            'rdIncomeBuildUTC': history['builtUTC'], 'chinaNbs': nbs}
     dump_json(DATA / 'industry_explorer.json', view)
     report = {'built_utc': datetime.now(timezone.utc).isoformat(), 'rd_income_build_utc': history['builtUTC'],
               'request_years': [START, END], 'archived_responses': len(manifest), 'economies_audited': len(countries),
@@ -276,12 +290,15 @@ def build():
                           'economies_with_divisions': sum(r[s + '_latest_year'] is not None for r in overview),
                           'latest_year': max(r[s + '_latest_year'] or 0 for r in overview)} for s in SOURCE_NAMES},
               'gva_union_economies': sum(any(r[s + '_latest_year'] is not None for s in SOURCE_NAMES) for r in overview),
-              'unido_combination_records_excluded_from_divisions': sum(r['source'] == 'UNIDO_INDSTAT' for r in others),
+               'unido_combination_records_excluded_from_divisions': sum(r['source'] == 'UNIDO_INDSTAT' for r in others),
+              'china_nbs': {'year': 2023, 'native_product_sectors': len(nbs), 'isic_mapping': 'not harmonised',
+                            'value_added_total_cny': sum(r['value_national_currency'] for r in nbs)},
               'baseline_file_sha256': baseline,
               'output_sha256': {name: digest(DATA / name) for name in [*outputs, 'industry_exports_gva.xlsx', 'industry_explorer.json']},
               'validation': {k: 'passed' for k in ['source_hashes', 'export_range_and_unique_years', 'gva_dimensions_and_unique_cells',
                              'isic_combinations_separated', 'unit_multipliers_and_current_prices', 'aggregate_geographies_excluded',
-                             'missingness_preserved', 'country_year_coverage_grid', 'baseline_inputs_preserved']}}
+                              'missingness_preserved', 'country_year_coverage_grid', 'baseline_inputs_preserved',
+                              'tiva_valu_usd_and_china_selection', 'nbs_native_cells_units_and_accounting']}}
     assert all(digest(DATA / name) == sha for name, sha in baseline.items())
     dump_json(DATA / 'industry_validation.json', report)
     print(json.dumps({k: v for k, v in report.items() if k not in ['output_sha256', 'baseline_file_sha256']}, indent=2))

@@ -9,7 +9,8 @@ ROOT = Path(__file__).resolve().parent
 DOWNLOADS = ['mht_exports_annual.csv', 'rd_income_exports_annual.csv', 'rd_income_exports_snapshot.csv',
              'gva_isic2.csv', 'gva_other_activities.csv', 'gva_country_year_coverage.csv',
              'industry_country_coverage.csv', 'gva_metadata.csv', 'gva_definitions.csv',
-             'industry_exports_gva.xlsx', 'industry_validation.json', 'industry_verification.json']
+             'industry_exports_gva.xlsx', 'industry_validation.json', 'industry_verification.json',
+             'china_nbs_io_value_added.csv']
 
 
 def sha(path):
@@ -43,6 +44,7 @@ def build_industry_site(destination: Path, rd_build: str):
     for name in DOWNLOADS:
         (destination / name).write_bytes((data / name).read_bytes())
     (destination / 'INDUSTRY_DATA.md').write_bytes((ROOT / 'INDUSTRY_DATA.md').read_bytes())
+    (destination / 'CHINA_GVA.md').write_bytes((ROOT / 'CHINA_GVA.md').read_bytes())
     coverage = [f'<div><strong>{report["exports"]["economies"]}</strong>economies with export shares<br><span class="muted">Latest year: {report["exports"]["latest_year"]}</span></div>',
                 f'<div><strong>{report["gva_union_economies"]}</strong>economies with some single-division value added</div>',
                 f'<div><strong>{report["gva"]["OECD_NA"]["economies_with_divisions"]}</strong>economies with some OECD national-accounts divisions<br><span class="muted">{verify["native_single_division_economies_excluding_section_equivalents"]["OECD_NA"]} have explicit division codes; remaining coverage uses one-division sections</span></div>']

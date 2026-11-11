@@ -34,6 +34,9 @@ The sources are retained separately. A country can have overlapping observations
 | `OECD_NA` | OECD annual national accounts, `OECD.SDD.NAD,DSD_NAMAIN10@DF_TABLE6,2.0`; annual, total institutional sector, transaction `B1G`, domestic currency `XDC`, current prices `V`, untransformed `N` | Wider economy. Available activity detail differs substantially by country/year. Both original broad aggregates and division-level entries are returned. |
 | `OECD_STAN` | OECD STAN 2025 edition, `OECD.STI.PIE,DSD_STAN@DF_STAN_2025,1.0`; annual, `B1G`, `V`, `XDC` | Wider economy, with national accounts as a principal input and additional estimates. Preserve `OBS_STATUS`, including estimated (`E`) observations. This is not independent confirmation of OECD national accounts. |
 | `UNIDO_INDSTAT` | [UNIDO INDSTAT Rev.4](https://stat.unido.org/portal/dataset/getDataset/INDSTAT/4), variable `20` (Value added), all catalog countries and genuine two-character numeric activity codes | Industrial statistics: mining, manufacturing, electricity/gas and water/waste, sections **B–E**. Establishment survey coverage and valuation can differ from whole-economy national accounts. It does not supply agriculture, construction or services. |
+| `OECD_TIVA_CHN` | OECD TiVA 2025, `OECD.STI.PIE,DSD_TIVA_MAINLV@DF_MAINLV,1.1`; `VALU.CHN..W.USD.A` | China-only selection of total value added, annual 2000–2022, from harmonised/balanced ICIO estimates. 31 single divisions per year; multi-division groups remain separate. Other economies were not requested. See [China assessment](CHINA_GVA.md). |
+
+Direct China NBS data are additionally provided in `china_nbs_io_value_added.csv`: 211 native product sectors in the 2023 competitive input–output table. These are not counted as ISIC divisions. The source workbook, catalogue, report response and official national-classification PDF are archived with the other supplement inputs.
 
 ### Activity detail and combinations
 
@@ -47,7 +50,7 @@ A single-division code is not a guarantee of complete economic coverage. For exa
 
 ### Units, currencies, prices and valuation
 
-- `value_reported` retains the source number. For OECD, `unit_multiplier` is the SDMX power of ten; `value_national_currency = value_reported × 10^unit_multiplier` is a **derived scaling**, not a currency conversion. This vintage reports millions (`6`).
+- `value_reported` retains the source number. For OECD national accounts and STAN, `unit_multiplier` is the SDMX power of ten; `value_national_currency = value_reported × 10^unit_multiplier` is a **derived scaling**, not a currency conversion. This vintage reports millions (`6`). TiVA instead reports **USD millions**: its scaled amount is in `value_usd_provider`, with `currency_code = USD` and a blank national-currency value. No CNY conversion is inferred.
 - OECD national accounts supplies a per-observation `CURRENCY` code, retained as `currency_code`. The selected STAN response does **not** supply this field; it remains blank. `XDC` identifies domestic currency but does not resolve a historical currency code.
 - UNIDO `v` is national-currency units, and `u` is the provider's current-USD amount. Both are retained; `value_usd_provider` is not our conversion. The portal's currency selector uses `u` for USD and `v` for national currency; its denomination selector divides these unit amounts by 1,000/1,000,000/1,000,000,000 for display. Checked against the public frontend on 11 November 2026: [data browser](https://stat.unido.org/data/table?dataset=indstat&revision=4), `data_browser_react/js/dist/main.js` (`we` display function).
 - UNIDO's [database description](https://stat.unido.org/data/database-descriptions), section *INDSTAT Revision 4*, states that monetary data are current-price national currency and USD, using period-average exchange rates from the IMF and other sources. Its displayed historical coverage text is older than the current API release; the actual downloaded coverage audit is authoritative for this build.
@@ -61,6 +64,7 @@ A single-division code is not a guarantee of complete economic coverage. For exa
 - UNIDO returns some numeric zeros, which its own UI displays as an em dash. These are retained as numeric zero with `value_status = provider_zero_displayed_as_dash`, rather than asserting that they are true economic zeros. The coverage audit includes separate numeric and nonzero division counts.
 - Negative value added, if returned, is retained. Non-finite numbers and duplicated observation keys fail the build.
 - OECD status/confidentiality/estimation attributes are preserved. The complete raw row also remains available through `source_file` and `raw_record` (one-based index among CSV data rows, excluding the header, or the UNIDO JSON `data` array).
+- TiVA's selected CSV does not supply observation-status attributes. Its ICIO estimation basis is recorded explicitly in `est_method`. The direct NBS table has a different native-data schema, preserving its Excel sheet and cell locators, ten-thousand-yuan units, producers' prices, and unresolved ISIC mapping.
 - `gva_metadata.csv` holds UNIDO country/variable/year/activity notes and observation notes. Join by source + ISO3; additionally use year, activity, or `raw_record` according to `level`. For observation-level metadata, `key` is the original response record index. `gva_definitions.csv` contains relevant OECD codelist descriptions.
 
 ## Coverage and downloads
@@ -70,6 +74,7 @@ A single-division code is not a guarantee of complete economic coverage. For exa
 - `gva_country_year_coverage.csv`: every audited economy × source × requested year, including zero-coverage entries. Counts do not establish full coverage of all divisions or establishment sizes.
 - `industry_country_coverage.csv`: latest export share/year and latest division-availability year/count for each GVA source. Latest means the latest year with **any** numeric division data; completeness can decrease in that year.
 - `industry_exports_gva.xlsx`: companion workbook containing these normalized data, joins, definitions, notes and coverage audits.
+- `china_nbs_io_value_added.csv`: official China 2023 native product-sector value added and components; also included in the companion workbook. See `CHINA_GVA.md` for source selection and classification/valuation limits.
 - `industry.html`: export lookup and source-specific latest-available detailed value-added tables. Full annual data are available as CSV/Excel.
 - `industry_source_inventory.csv` and `industry_source_manifest.json`: exact URLs, POST request bodies, retrieval timestamps and response SHA-256 hashes. Original responses are in the research ZIP under `data/industry_raw/`.
 

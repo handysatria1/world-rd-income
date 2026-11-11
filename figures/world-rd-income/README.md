@@ -329,3 +329,5 @@ Additional validation commands (after rebuilding): `python verify_breakdown.py` 
 ## Export technology and ISIC two-digit value-added supplement
 
 See [INDUSTRY_DATA.md](INDUSTRY_DATA.md) for the separately versioned World Bank/UNIDO export percentages and OECD/UNIDO value-added data. The companion workbook, annual joins, country/year coverage, original responses and exact requests are included in research downloads. Run `industry_sources.py`, `industry_data.py` and `verify_industry.py` after the main scientific build and before `build_site.py`. The supplement's interactive page is `industry.html`.
+
+The [China source assessment](CHINA_GVA.md) documents TiVA total value added (`VALU`, 31 ISIC divisions annually in 2000–2022) and the official NBS 2023 input–output benchmark (211 native product sectors). The NBS CSV preserves original names, codes, components and Excel cell locators; its ISIC correspondence remains unresolved.

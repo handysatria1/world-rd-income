@@ -50,7 +50,7 @@ def build_site(destination: Path) -> None:
         "requirements.txt", "README.md", "AUTOMATION.md", "OFFICIAL_DATA.md", "historical_explorer.py",
         "CITATION.cff", "CITATION.bib",
         "source_guide.py", "data_sources.html",
-        "industry_sources.py", "industry_data.py", "verify_industry.py", "industry_site.py", "industry.html", "INDUSTRY_DATA.md",
+        "industry_sources.py", "industry_data.py", "verify_industry.py", "industry_site.py", "industry.html", "INDUSTRY_DATA.md", "china_gva.py", "CHINA_GVA.md",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
         "nominal_rd.py", "test_nominal_rd.py",
         "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",
@@ -58,7 +58,7 @@ def build_site(destination: Path) -> None:
         "breakdown_sources.py", "breakdown_rd.py", "breakdown_figures.py", "breakdown_core.js",
         "test_breakdown.js", "verify_breakdown.py", "official_sources.py", "official_rd.py",
     )]
-    files += [p for p in (ROOT / "data").rglob("*") if p.is_file() and p.suffix in {".json", ".csv", ".xml", ".xlsx", ".md", ".html", ".zip", ".px"}]
+    files += [p for p in (ROOT / "data").rglob("*") if p.is_file() and p.suffix in {".json", ".csv", ".xml", ".xlsx", ".md", ".html", ".zip", ".px", ".pdf"}]
     files += [p for p in (ROOT / "output").iterdir() if p.is_file() and p.suffix in {".html", ".png", ".svg", ".pdf"}]
     with ZipFile(destination / "world-rd-income.zip", "w", ZIP_DEFLATED) as archive:
         for path in sorted(files):
@@ -73,6 +73,7 @@ def build_site(destination: Path) -> None:
         for name in INDUSTRY_DOWNLOADS:
             offline = offline.replace(f'href="{name}"', f'href="figures/world-rd-income/data/{name}"')
         offline = offline.replace('href="INDUSTRY_DATA.md"', 'href="figures/world-rd-income/INDUSTRY_DATA.md"')
+        offline = offline.replace('href="CHINA_GVA.md"', 'href="figures/world-rd-income/CHINA_GVA.md"')
         offline = offline.replace('href="index.html"', 'href="figures/world-rd-income/output/world_rd_income_explorer.html"')
         offline = offline.replace('<a href="world-rd-income.zip">Full reproducible research ZIP</a>', 'Full research package: this extracted directory')
         archive.writestr("world-rd-income/industry.html", offline)
