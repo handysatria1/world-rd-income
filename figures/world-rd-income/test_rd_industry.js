@@ -13,8 +13,16 @@ assert.equal(core.available({...row,totalUSD:null},"composition","amount"),false
 if(process.argv.includes("--built")){
   const built=JSON.parse(fs.readFileSync("data/rd_industry_explorer.json","utf8"));
   const examples=core.select(built,built.defaults,"2022","composition");
-  assert.equal(examples.find(r=>r.iso==="SGP").available,false);
-  assert.equal(examples.find(r=>r.iso==="ES-PV").row.remainingShare,100);
+  assert.equal(examples.find(r=>r.iso==="SGP").available,true);
+  assert.equal(examples.find(r=>r.iso==="SGP").row.status,"reported_total_only");
+  assert.equal(examples.find(r=>r.iso==="SGP").row.remainingShare,100);
+  assert(examples.find(r=>r.iso==="ES-PV").row.remainingShare<100);
+  const singapore=core.select(built,["SGP"],"2023","composition")[0];
+  assert.equal(singapore.row.source,"SGP_RIE");
+  assert.equal(singapore.row.assignedLocal[2],2316260000);
+  assert(singapore.row.complete.every(v=>v===false));
+  assert.equal(core.available(singapore.row,"intensity"),false);
+  assert.equal(singapore.row.nativeRows.length,16);
   assert.equal(core.select(built,["SGP"],"latest","composition")[0].year,Math.max(...built.rows.filter(r=>r.iso==="SGP"&&r.stackAvailable).map(r=>r.year)));
   for(const r of built.rows){
     r.intensity.forEach((v,i)=>{if(v!==null)assert.equal(r.complete[i],true);});

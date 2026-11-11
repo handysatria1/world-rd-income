@@ -4,11 +4,11 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
 from openpyxl import Workbook
-from basque_rd import px_rows
 from broad_sectors import DATA, GROUPS, DISPLAY, write
 from industry_data import read_csv, digest
 from rd_industry_sources import RAW, SOURCES
 from rd_industry_mapping import Classification, aggregate
+from rd_industry_native import native_components, aggregate_native, mapping_note, SCOPE, CRITERIA
 from sector_field_rd import FLAGS, normalized_value
 
 OUTPUTS = ['rd_industry_annual.csv', 'rd_economy_joined.csv', 'rd_economy_context.csv',
@@ -17,7 +17,8 @@ CURRENCY_COUNTRIES = {'ARS': 'ARG', 'AUD': 'AUS', 'BGN': 'BGR', 'CAD': 'CAN', 'C
                       'CNY': 'CHN', 'CZK': 'CZE', 'DKK': 'DNK', 'GBP': 'GBR', 'HUF': 'HUN', 'ILS': 'ISR',
                       'ISK': 'ISL', 'JPY': 'JPN', 'KRW': 'KOR', 'MXN': 'MEX', 'NOK': 'NOR', 'NZD': 'NZL',
                       'PLN': 'POL', 'RON': 'ROU', 'SEK': 'SWE', 'SGD': 'SGP', 'TRY': 'TUR'}
-SOURCE_NAMES = {'OECD_RDS': 'OECD RDS BERD · main activity', 'EUSTAT_NATIVE': 'Eustat companies + PNPI · native branches'}
+SOURCE_NAMES = {'OECD_RDS': 'OECD RDS BERD · main activity', 'EUSTAT_NATIVE': 'Eustat companies + PNPI · native branches',
+                'SGP_RIE': 'A*STAR National RIE Survey · private-sector R&D (S&T)'}
 GROUP_IDS = [g['id'] for g in GROUPS]
 
 
@@ -81,50 +82,51 @@ def build():
                      'price_base': row['PRICE_BASE'], 'source_decimals': int(row['DECIMALS']), 'amount_local': amount, 'availability': availability,
                      'aggregation_eligible': eligible, 'eligibility_note': 'includes unspecified other categories' if includes else availability,
                      'mapping_group': matching[0] if matching else '', 'rounding_local': .5 * 10 ** (int(row['UNIT_MULT']) - int(row['DECIMALS'])),
-                     **{flag: row[flag] for flag in FLAGS}, 'source_file': 'oecd_berd_industry.csv', 'raw_record': i}
+                      **{flag: row[flag] for flag in FLAGS}, 'source_file': 'oecd_berd_industry.csv', 'raw_record': i,
+                      'source_sheet': '', 'source_cell': ''}
         assert code not in blocks[iso, year]
         blocks[iso, year][code] = component
         components.append(component)
-    for i, (coords, labels, value, flag, _) in enumerate(px_rows(RAW / 'eustat_rd_industry.json'), 1):
-        year, code = int(coords['periodo']), coords['rama de actividad']
-        if year < 2000:
-            continue
-        assert coords['naturaleza'] == '10'
-        component = {'iso3': 'ES-PV', 'economy': 'Basque Country', 'year': year, 'source': 'EUSTAT_NATIVE',
-                     'scope': 'companies + private non-profit institutions', 'criteria': 'native branches; exact ISIC4 bridge unresolved',
-                     'activity_code': code, 'activity_label': labels['rama de actividad'], 'value_reported': value, 'unit_multiplier': 3,
-                     'currency': 'EUR', 'price_base': 'V', 'source_decimals': 0, 'amount_local': value * 1000 if value is not None else None,
-                     'availability': 'available' if value is not None else 'missing_source_value', 'aggregation_eligible': False,
-                     'eligibility_note': 'native branch classification crosses requested groups; no verified exact bridge',
-                     'mapping_group': '', 'rounding_local': 500, **{k: '' for k in FLAGS},
-                     'source_file': 'eustat_rd_industry.json', 'raw_record': i}
-        component['OBS_STATUS'] = flag
-        blocks['ES-PV', year][code] = component
-        components.append(component)
+    native = native_components(RAW)
+    native_blocks = defaultdict(dict)
+    for component in native:
+        native_blocks[component['iso3'], component['year']][component['activity_code']] = component
+    components.extend(native)
+    for key, cells in native_blocks.items():
+        # Select a coherent native block; never combine different vintages/classifications.
+        # Retain all original OECD cells in the source-component download.
+        if key[0] == 'ES-PV' or key == ('SGP', 2023) or not any(r['amount_local'] is not None for r in blocks[key].values()):
+            blocks[key] = cells
     annual, coverage, view = [], [], []
     economies = sorted(set(c['iso'] for c in sector['countries']) | {k[0] for k in blocks})
     for iso in economies:
         for year in range(2000, 2026):
             cells = blocks.get((iso, year), {})
             basque = iso == 'ES-PV'
-            source = 'EUSTAT_NATIVE' if basque else 'OECD_RDS'
-            scope = 'companies + PNPI' if basque else 'BERD'
+            source = next(iter(cells.values()))['source'] if cells else 'EUSTAT_NATIVE' if basque else 'OECD_RDS'
+            native_source = source != 'OECD_RDS'
+            scope = SCOPE.get(source, 'BERD')
             currencies = {r['currency'] for r in cells.values()}
             assert len(currencies) <= 1
             currency = next(iter(currencies), '')
             fx = conversion(iso, year, currency) if currency else {}
             rate = fx.get('local_per_usd')
-            total_row = cells.get('000' if basque else '_T', {})
+            total_code = '000' if basque else ('RIE_19' if year == 2023 else 'RIE_TOTAL') if source == 'SGP_RIE' else '_T'
+            total_row = cells.get(total_code, {})
             total = total_row.get('amount_local')
-            grouped = {g: None for g in GROUP_IDS} if basque else aggregate(cells, classification)
+            native_leaves = [r['amount_local'] for c, r in cells.items()
+                             if native_source and c not in {'000', 'RIE_TOTAL', 'RIE_06', 'RIE_13', 'RIE_19'}]
+            native_leaf_sum = sum(native_leaves) if native_leaves and all(v is not None for v in native_leaves) else None
+            grouped = aggregate_native(cells, GROUP_IDS) if native_source else aggregate(cells, classification)
             valid_groups = [r for r in grouped.values() if r is not None]
             assigned = sum(r['value'] for r in valid_groups) if valid_groups else None
             remainder = total - (assigned or 0) if total is not None else None
             complete_groups = [g for g, r in grouped.items() if r is not None and r['classes'] == classification.groups[g]]
-            status = ('no_industry_observations' if not cells else 'native_classification_unresolved' if basque else
+            status = ('no_industry_observations' if not cells else
                       'missing_reported_total' if total is None else 'nonpositive_reported_total' if total <= 0 else
                       'negative_reconciliation_remainder' if remainder < 0 else 'fully_classified' if len(complete_groups) == 6 and remainder == 0 else
-                      'partially_classified' if assigned is not None else 'no_classifiable_components')
+                      'partially_classified_native_branches' if native_source and assigned is not None else
+                      'partially_classified' if assigned is not None else 'reported_total_only' if source == 'SGP_RIE' else 'no_classifiable_components')
             usable = total is not None and total > 0 and remainder is not None and remainder >= 0
             rd_rows = []
             for group in GROUPS:
@@ -136,7 +138,7 @@ def build():
                 covered = result['classes'] if result else frozenset()
                 flags = ';'.join(sorted({f'{f}={cells[code][f]}' for code in terms for f in FLAGS if cells[code][f]}))
                 row = {'iso3': iso, 'economy': country_names[iso], 'year': year, 'group': gid, 'group_label': group['label'],
-                       'rd_source': source, 'rd_scope': scope, 'classification_criteria': 'main activity' if not basque else 'native branches; bridge unresolved',
+                       'rd_source': source, 'rd_scope': scope, 'classification_criteria': CRITERIA if native_source else 'main activity',
                        'assigned_rd_local': local, 'currency': currency, 'assigned_rd_usd': local / rate if local is not None and rate else None,
                        'group_complete': complete, 'group_coverage': 'complete' if complete else 'partial' if result else 'unavailable',
                        'group_rd_total_usd': local / rate if complete and rate else None,
@@ -145,12 +147,17 @@ def build():
                        'unallocated_rd_local': remainder, 'unallocated_rd_usd': remainder / rate if remainder is not None and rate else None,
                        'coverage_status': status, 'source_terms_json': json.dumps(terms, sort_keys=True, separators=(',', ':')),
                        'source_records': ';'.join(str(cells[c]['raw_record']) for c in sorted(terms)),
-                       'source_file': 'eustat_rd_industry.json' if basque else 'oecd_berd_industry.csv',
-                       'covered_isic4_classes': ';'.join(sorted(covered)), 'missing_isic4_classes': ';'.join(sorted(classification.groups[gid] - covered)),
+                       'source_file': total_row.get('source_file', 'eustat_rd_industry.json' if basque else 'oecd_berd_industry.csv'),
+                       'source_locators': ';'.join(f"{cells[c]['source_sheet']}!{cells[c]['source_cell']}" if cells[c]['source_sheet'] else f"record {cells[c]['raw_record']}" for c in sorted(terms)),
+                       'covered_isic4_classes': ';'.join(sorted(covered)),
+                       'missing_isic4_classes': '' if native_source else ';'.join(sorted(classification.groups[gid] - covered)),
+                       'class_coverage_basis': 'native branch-label containment; exact classes unresolved' if native_source else 'exact ISIC4 class sets',
                        'source_flags': flags, 'local_per_usd': rate, 'fx_source_file': fx.get('source_file', ''),
                        'fx_raw_record': fx.get('raw_record'), 'fx_reference_area': fx.get('fx_reference_area', ''),
-                       'value_status': 'derived_disjoint_public_components' if result else 'not_derived',
-                       'note': 'Partial assigned amounts are not full sector totals. U is excluded; unsplittable S-U aggregates remain unallocated.' if not basque else 'Native branches mix chemistry/refining, production/utilities and services; companies also include PNPI. Exact six-sector allocation unavailable.'}
+                       'value_status': ('derived_partial_native_branches' if native_source else 'derived_disjoint_public_components') if result else 'not_derived',
+                       'note': 'Partial assigned amounts are not full sector totals. U is excluded; unsplittable S-U aggregates remain unallocated.' if not native_source else
+                               'Native branch labels support partial groups only; class lists are unresolved, not empty coverage. Mixed branches remain unallocated. '
+                               + ('Companies include PNPI; allocations begin 2003.' if basque else 'S&T R&D excludes social sciences/humanities. Industry detail is 2023 only; other RIE years provide totals only.')}
                 annual.append(row)
                 rd_rows.append(row)
             coverage.append({'iso3': iso, 'economy': country_names[iso], 'year': year, 'rd_source': source, 'rd_scope': scope,
@@ -159,6 +166,9 @@ def build():
                              'complete_groups': ';'.join(complete_groups), 'source_cells': len(cells),
                              'eligible_cells': sum(r['aggregation_eligible'] for r in cells.values()),
                              'total_source_file': total_row.get('source_file', ''), 'total_raw_record': total_row.get('raw_record'),
+                             'total_activity_code': total_code, 'total_source_sheet': total_row.get('source_sheet', ''), 'total_source_cell': total_row.get('source_cell', ''),
+                             'native_leaf_sum_local': native_leaf_sum,
+                             'native_total_minus_leaves_local': total - native_leaf_sum if total is not None and native_leaf_sum is not None else None,
                              'total_flags': ';'.join(f'{f}={total_row[f]}' for f in FLAGS if total_row.get(f)),
                              'local_per_usd': rate, 'rounding_tolerance_local': sum(r['rounding'] for r in valid_groups) + total_row.get('rounding_local', 0),
                              'interpretation': 'Remainder includes unresolved classification, missing/confidential components, U and source discrepancies; not a seventh economic industry.'})
@@ -171,7 +181,13 @@ def build():
                          'remainingShare': remainder / total * 100 if usable else None,
                          'classifiedShare': (assigned or 0) / total * 100 if usable else None,
                          'stackAvailable': usable, 'totalFlags': ';'.join(f'{f}={total_row[f]}' for f in FLAGS if total_row.get(f)),
-                         'flags': '; '.join(sorted({r['source_flags'] for r in rd_rows if r['source_flags']}))})
+                         'flags': '; '.join(sorted({r['source_flags'] for r in rd_rows if r['source_flags']})),
+                         'nativeRows': [{'code': r['activity_code'], 'label': r['activity_label'], 'amountLocal': r['amount_local'],
+                                         'currency': r['currency'], 'group': r['mapping_group'], 'eligible': r['aggregation_eligible'],
+                                         'note': r['eligibility_note'], 'source': r['source'], 'sourceFile': r['source_file'],
+                                         'flags': ';'.join(f'{f}={r[f]}' for f in FLAGS if r[f]),
+                                         'locator': f"{r['source_sheet']}!{r['source_cell']}" if r['source_sheet'] else f"record {r['raw_record']}"}
+                                        for r in native_blocks.get((iso, year), {}).values()]})
 
     context_input = read_csv(DATA / 'rd_income_exports_annual.csv')
     context_keys = {(r['iso3'], int(r['year'])): r for r in context_input}
@@ -250,10 +266,10 @@ def build():
                         'isic4_classes': ';'.join(sorted(classes)), 'group_memberships': ';'.join(groups),
                         'wholly_within_one_group': len(groups) == 1 and not classes & classification.coverage('U'),
                         'contains_U': bool(classes & classification.coverage('U')), 'note': 'Source totals overlap components; only selected disjoint expressions are aggregated.'})
-    for code, cell in sorted(next(c for (iso, _), c in blocks.items() if iso == 'ES-PV').items()):
-        mapping.append({'source': 'EUSTAT_NATIVE', 'activity_code': code, 'activity_label': cell['activity_label'], 'isic4_classes': '',
-                        'group_memberships': '', 'wholly_within_one_group': False, 'contains_U': '',
-                        'note': 'Native branch values retained; exact ISIC4 bridge not established. No six-group allocation.'})
+    for (source, code), cell in sorted({(r['source'], r['activity_code']): r for r in native}.items()):
+        mapping.append({'source': source, 'activity_code': code, 'activity_label': cell['activity_label'], 'isic4_classes': '',
+                        'group_memberships': cell['mapping_group'], 'wholly_within_one_group': bool(cell['mapping_group']), 'contains_U': '',
+                        'note': mapping_note(source, code)})
     tables = [annual, joined, context, components, coverage, mapping, list(fx_records.values())]
     workbook = Workbook(write_only=True)
     for name, rows in zip(OUTPUTS, tables):
@@ -266,7 +282,7 @@ def build():
     built = datetime.now(timezone.utc).isoformat()
     payload = {'builtUTC': built, 'groups': [{k: g[k] for k in ['id', 'label', 'color']} for g in GROUPS],
                'countries': [{'iso': iso, 'name': country_names[iso], 'display': DISPLAY.get(iso, country_names[iso]), 'region': iso == 'ES-PV'} for iso in economies],
-               'defaults': sector['defaults'], 'sources': SOURCE_NAMES, 'rows': view}
+               'defaults': sector['defaults'], 'defaultYear': 'latest', 'sources': SOURCE_NAMES, 'rows': view}
     (DATA / 'rd_industry_explorer.json').write_text(json.dumps(payload, ensure_ascii=False, allow_nan=False, separators=(',', ':')) + '\n', encoding='utf-8')
     inputs = ['broad_sector_validation.json', 'sector_economy_validation.json', 'industry_validation.json', 'validation_report.json',
               'rd_income_exports_annual.csv', 'rd_nominal_annual.csv', 'broad_sector_explorer.json', 'sector_economy_explorer.json',

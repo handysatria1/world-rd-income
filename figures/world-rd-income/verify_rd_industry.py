@@ -47,9 +47,16 @@ def verify():
                 'C16T18': prefixes('C16', 'C17', 'C18'), 'C25T30': prefixes('C25', 'C26', 'C27', 'C28', 'C29', 'C30'),
                 'C10_11': prefixes('C10', 'C11'), 'C241_2431': prefixes('C241', 'C2431'), 'C242_2432': prefixes('C242', 'C2432')}
     class_sets = {}
+    # Native assignments are label-level containments, never full class vectors.
+    native_groups = {'EUSTAT_NATIVE': {'060': 'LMT', '080': 'LMT', '100': 'LMT', '120': 'LMT',
+                                      '140': 'MHT', '160': 'MHT', '180': 'MHT', '200': 'MHT', '220': 'MHT', '260': 'MHT',
+                                      '320': 'OTH', '340': 'KIS', '360': 'KIS'},
+                     'SGP_RIE': {'RIE_09': 'MHT', 'RIE_12': 'LMT', 'RIE_14': 'KIS', 'RIE_16': 'KIS', 'RIE_17': 'LIS'}}
     for r in read_csv(DATA / 'rd_industry_mapping.csv'):
         if r['source'] != 'OECD_RDS':
-            assert not r['isic4_classes'] and r['wholly_within_one_group'] == 'False'
+            expected = native_groups[r['source']].get(r['activity_code'], '')
+            assert not r['isic4_classes'] and r['group_memberships'] == expected
+            assert (r['wholly_within_one_group'] == 'True') == bool(expected)
             continue
         code = r['activity_code']
         expected = explicit.get(code)
@@ -64,6 +71,7 @@ def verify():
                'KIS': prefixes(*'JKMP'), 'LIS': prefixes(*'GHILNOQRST'), 'UTL': prefixes(*'DE'), 'OTH': prefixes(*'ABF')}
     raw = read_csv(RAW / 'oecd_berd_industry.csv')
     basque = list(px_rows(RAW / 'eustat_rd_industry.json'))
+    rie = load_workbook(RAW / 'singapore_rie_2023.xlsx', read_only=True, data_only=True)
     components = read_csv(DATA / 'rd_industry_components.csv')
     cells = {}
     for r in components:
@@ -80,17 +88,34 @@ def verify():
             amount = float(Decimal(s['OBS_VALUE']) * 10 ** int(s['UNIT_MULT'])) if available else None
             close(r['value_reported'], s['OBS_VALUE'])
             assert (r['aggregation_eligible'] == 'True') == (available and 'W' not in statuses and 'O2' not in aux)
-        else:
+        elif r['source'] == 'EUSTAT_NATIVE':
             coords, _, value, flag, _ = basque[record]
             assert (coords['periodo'], coords['rama de actividad']) == (r['year'], r['activity_code'])
             assert r['OBS_STATUS'] == flag and r['currency'] == 'EUR'
             close(r['value_reported'], value)
             amount = None if value is None else value * 1000
-            assert r['aggregation_eligible'] == 'False'
+            assert (r['aggregation_eligible'] == 'True') == (r['activity_code'] in native_groups['EUSTAT_NATIVE'] and value is not None and not flag and int(r['year']) >= 2003)
+        else:
+            assert r['source'] == 'SGP_RIE' and r['iso3'] == 'SGP' and r['currency'] == 'SGD'
+            assert r['source_file'] == 'singapore_rie_2023.xlsx'
+            s = rie[r['source_sheet']]
+            value = s[r['source_cell']].value
+            close(r['value_reported'], value)
+            amount = float(Decimal(str(value)) * 1_000_000)
+            if r['activity_code'] == 'RIE_TOTAL':
+                assert r['source_sheet'] == 'Table 5.1' and r['source_cell'] == f'I{record + 1}'
+                assert int(r['year']) == s[f'A{record + 1}'].value
+            else:
+                assert r['year'] == '2023' and r['source_sheet'] == 'Table 3.1' and 5 <= record + 1 <= 19
+                assert r['activity_code'] == f'RIE_{record + 1:02}' and r['source_cell'] == f'J{record + 1}'
+                assert r['activity_label'] == s[f'A{record + 1}'].value.strip()
+            assert (r['aggregation_eligible'] == 'True') == (r['activity_code'] in native_groups['SGP_RIE'])
+            assert all(not r[f] for f in FLAGS)
         close(r['amount_local'], amount)
         key = r['iso3'], r['year'], r['activity_code']
         assert key not in cells
         cells[key] = r
+    rie.close()
     fx = {(r['iso3'], r['year']): r for r in read_csv(DATA / 'rd_industry_fx.csv')}
     fx_raw = json.loads((RAW / 'wb_exchange_history.json').read_bytes())[1]
     for r in fx.values():
@@ -111,19 +136,28 @@ def verify():
         aindex[*key, r['group']] = r
         vector = Counter()
         value = 0
+        native = r['rd_source'] != 'OECD_RDS'
         for code, coefficient in terms.items():
             s = cells[*key, code]
-            assert s['aggregation_eligible'] == 'True'
+            assert s['aggregation_eligible'] == 'True' and s['source'] == r['rd_source']
             value += coefficient * float(s['amount_local'])
-            for c in class_sets[code]:
-                vector[c] += coefficient
+            if native:
+                assert coefficient == 1 and native_groups[r['rd_source']][code] == r['group']
+                assert code not in used[key]
+                used[key].add(code)
+            else:
+                for c in class_sets[code]:
+                    vector[c] += coefficient
         assert all(w in [0, 1] for w in vector.values())
         assigned = {c for c, w in vector.items() if w}
         assert assigned <= targets[r['group']] and not assigned & prefixes('U')
         assert not assigned & used[key]
         used[key].update(assigned)
         assert set(filter(None, r['covered_isic4_classes'].split(';'))) == assigned
-        assert set(filter(None, r['missing_isic4_classes'].split(';'))) == targets[r['group']] - assigned
+        assert set(filter(None, r['missing_isic4_classes'].split(';'))) == (set() if native else targets[r['group']] - assigned)
+        if native:
+            assert not assigned and r['group_complete'] == 'False'
+            assert r['class_coverage_basis'] == 'native branch-label containment; exact classes unresolved'
         assert (r['group_complete'] == 'True') == (assigned == targets[r['group']])
         close(r['assigned_rd_local'], value if terms else None)
         if terms:
@@ -135,12 +169,21 @@ def verify():
     audits = read_csv(DATA / 'rd_industry_coverage.csv')
     for r in audits:
         key = r['iso3'], r['year']
+        if r['native_leaf_sum_local']:
+            source_rows = [s for s in components if (s['iso3'], s['year'], s['source']) == (*key, r['rd_source'])]
+            leaf_codes = [f'{n:03}' for n in [20,40,60,80,100,120,140,160,180,200,220,240,260,280,320,340,360,380,400]] if r['iso3'] == 'ES-PV' else [f'RIE_{n:02}' for n in [5,7,8,9,10,11,12,14,15,16,17,18]]
+            leaf_values = [float(s['amount_local']) for s in source_rows if s['activity_code'] in leaf_codes]
+            assert len(leaf_values) == len(leaf_codes)
+            close(r['native_leaf_sum_local'], sum(leaf_values))
+            close(r['native_total_minus_leaves_local'], float(r['reported_total_local']) - sum(leaf_values))
         if r['assigned_local']:
             close(r['assigned_local'], sums[key])
         if r['reported_total_local']:
             total = float(r['reported_total_local'])
-            original = cells[*key, '000' if r['iso3'] == 'ES-PV' else '_T']
+            original = cells[*key, r['total_activity_code']]
             close(total, original['amount_local'])
+            assert original['source_file'] == r['total_source_file'] and original['raw_record'] == r['total_raw_record']
+            assert original['source_sheet'] == r['total_source_sheet'] and original['source_cell'] == r['total_source_cell']
             close(r['unallocated_local'], total - sums[key])
             if float(r['unallocated_local']) < 0:
                 assert r['coverage_status'] == 'negative_reconciliation_remainder'
@@ -182,6 +225,13 @@ def verify():
                 close(r[f'gerd_{src}_usd'], s['amount'])
     view = json.loads((DATA / 'rd_industry_explorer.json').read_text('utf-8'))
     for r in view['rows']:
+        native_cells = {s['activity_code']: s for s in components if s['source'] != 'OECD_RDS' and s['iso3'] == r['iso'] and s['year'] == str(r['year'])} if r['iso'] in ['SGP', 'ES-PV'] else {}
+        assert {s['code'] for s in r['nativeRows']} == set(native_cells)
+        for n in r['nativeRows']:
+            s = native_cells[n['code']]
+            close(n['amountLocal'], s['amount_local'])
+            assert n['label'] == s['activity_label'] and n['currency'] == s['currency'] and n['sourceFile'] == s['source_file']
+            assert n['group'] == s['mapping_group'] and n['eligible'] == (s['aggregation_eligible'] == 'True')
         for i, group in enumerate(GROUPS):
             j = jindex[r['iso'], str(r['year']), group]
             for col, field in [('assigned', 'assigned_rd_usd'), ('assignedLocal', 'assigned_rd_local'), ('shares', 'assigned_share_reported_rd_percent'),
@@ -198,6 +248,14 @@ def verify():
     singapore_last = max(int(r['year']) for r in components if r['iso3'] == 'SGP' and r['amount_local'])
     assert not any(r['assigned_rd_local'] for r in annual if r['iso3'] == 'SGP' and int(r['year']) > singapore_last)
     assert not any(r['group_complete'] == 'True' for r in annual if r['iso3'] == 'ES-PV')
+    assert all(not r['assigned_rd_local'] for r in annual if r['iso3'] == 'SGP' and 2014 <= int(r['year']) <= 2022)
+    assert all(r['group_complete'] == 'False' for r in annual if r['rd_source'] == 'SGP_RIE')
+    close(aindex['SGP', '2023', 'KIS']['assigned_rd_local'], 2316260000)
+    close(aindex['SGP', '2023', 'LIS']['assigned_rd_local'], 1438530000)
+    close(aindex['SGP', '2022', 'MHT']['reported_rd_total_local'], 8130090000)
+    close(aindex['SGP', '2023', 'MHT']['reported_rd_total_local'], 8955990000)
+    close(aindex['ES-PV', '2022', 'MHT']['assigned_rd_local'], 321839000)
+    close(aindex['ES-PV', '2024', 'KIS']['assigned_rd_local'], 726150000)
     close(aindex['USA', '2022', 'MHT']['assigned_rd_local'], 335921000000)
     close(aindex['CHN', '2022', 'MHT']['assigned_rd_local'], 1340280286000)
     workbook = load_workbook(DATA / 'rd_industry_economy.xlsx', read_only=True, data_only=True)

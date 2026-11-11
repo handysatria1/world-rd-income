@@ -5,6 +5,9 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from xml.etree import ElementTree as ET
+from io import BytesIO
+
+from openpyxl import load_workbook
 
 from download_data import download
 
@@ -20,6 +23,12 @@ SOURCES = {
     'eustat_rd_industry_metadata.json': EUSTAT + TABLE,
     'eustat_rd_industry.json': EUSTAT + TABLE,
     'eustat_rd_industry.px': 'https://www.eustat.eus/bankupx/Resources/PX/Databases/DB/' + TABLE,
+    'eustat_rd_branches.html': 'https://en.eustat.eus/documentos/opt_1/tema_312/elem_25882/definicion.html',
+    'eustat_technology_definition.html': 'https://en.eustat.eus/documentos/elem_27063/definicion.html',
+    'singapore_rie_survey.html': 'https://www.a-star.edu.sg/news/national-survey-of-rie',
+    'singapore_rie_2023.xlsx': 'https://www.a-star.edu.sg/api/media/ea269952-e9da-4d95-a7a6-b19f20746fab.xlsx',
+    'singapore_rie_2023.pdf': 'https://www.a-star.edu.sg/api/media/5bf00b35-2e46-42f7-89e2-fb262d2b3b56.pdf',
+    'singapore_rie_notes.pdf': 'https://www.a-star.edu.sg/api/media/a616e021-2b13-472d-aed9-a2bc1249cc7b.pdf',
     'wb_exchange_history.json': 'https://api.worldbank.org/v2/country/all/indicator/PA.NUS.FCRF?source=2&date=2000:2025&format=json&per_page=20000&footnote=y',
     'wb_exchange_metadata.json': 'https://api.worldbank.org/v2/indicator/PA.NUS.FCRF?source=2&format=json',
 }
@@ -27,7 +36,16 @@ REQUESTS = {'eustat_rd_industry.json': {'query': [{'code': 'naturaleza', 'select
 
 
 def validate(name, body):
-    if name.endswith('.xml'):
+    if name.endswith('.xlsx'):
+        book = load_workbook(BytesIO(body), read_only=True, data_only=True)
+        assert 'List of Tables (2023)' in book.sheetnames
+        assert book['Table 3.1']['J19'].value == book['Table 5.1']['I37'].value == 8955.99
+        book.close()
+    elif name.endswith('.pdf'):
+        assert body.startswith(b'%PDF-')
+    elif name.endswith('.html'):
+        assert b'<html' in body.lower()
+    elif name.endswith('.xml'):
         assert ET.fromstring(body).find('.//{*}DataStructure') is not None
     elif name.endswith('.csv'):
         assert body.lstrip(b'\xef\xbb\xbf').startswith(b'STRUCTURE,') and b'OBS_VALUE' in body.splitlines()[0]
