@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this dashboard, code, derived datasets or figures, please cite this work. Record the archived release or commit, data build timestamp and access date, and acknowledge the original data providers."
+type: software
+title: "Worldwide R&D and income explorer, 2000–2025"
+authors:
+  - given-names: "Handy"
+    family-names: "Satria"
+date-released: "2026-11-11"
+url: "https://handysatria1.github.io/world-rd-income/"
+repository-code: "https://github.com/handysatria1/world-rd-income"
+abstract: "An interactive dashboard and reproducible research software for worldwide R&D intensity, income, funding, performing sectors and research types, with official-source provenance and explicit missingness."
+keywords:
+  - research and development
+  - research funding
+  - data visualization
+  - reproducible research

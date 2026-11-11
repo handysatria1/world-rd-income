@@ -43,6 +43,7 @@ def build_site(destination: Path) -> None:
     files = [ROOT / name for name in (
         "download_data.py", "reproduce_figures.py", "build_site.py",
         "requirements.txt", "README.md", "AUTOMATION.md", "OFFICIAL_DATA.md", "historical_explorer.py",
+        "CITATION.cff", "CITATION.bib",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
         "nominal_rd.py", "test_nominal_rd.py",
         "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",
@@ -55,10 +56,14 @@ def build_site(destination: Path) -> None:
     with ZipFile(destination / "world-rd-income.zip", "w", ZIP_DEFLATED) as archive:
         for path in sorted(files):
             archive.write(path, "world-rd-income/figures/world-rd-income/" + path.relative_to(ROOT).as_posix())
+        for name in ("CITATION.cff", "CITATION.bib"):
+            archive.write(ROOT / name, "world-rd-income/" + name)
         for name in ("update-world-rd-income.yml", "publish-world-rd-snapshot.yml"):
             workflow = ROOT.parents[1] / ".github" / "workflows" / name
             if workflow.exists():
                 archive.write(workflow, "world-rd-income/.github/workflows/" + name)
+    for name in ("CITATION.cff", "CITATION.bib"):
+        (destination / name).write_bytes((ROOT / name).read_bytes())
     (destination / "current_results.md").write_bytes((ROOT / "data" / "current_results.md").read_bytes())
     for name in ["rd_nominal_annual.csv", "rd_nominal_coverage.csv", "world_rd_income_data.xlsx", "basque_annual.csv",
                  "rd_sector_field_annual.csv", "rd_sector_field_coverage.csv", "rd_sector_field_reconciliation.csv", "rd_sector_field_definitions.csv",

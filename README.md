@@ -11,6 +11,14 @@ Explore worldwide R&D intensity, income, funding, performing sectors and researc
 - [Automation and reproduction](figures/world-rd-income/AUTOMATION.md).
 - [Refresh/deployment runs](https://github.com/handysatria1/world-rd-income/actions).
 
+## Suggested reference
+
+If you use this dashboard, code, derived datasets or figures, please cite:
+
+> Handy Satria. (2026). *Worldwide R&D and income explorer, 2000–2025* [Interactive dashboard and reproducible research software]. https://handysatria1.github.io/world-rd-income/
+
+[BibTeX](CITATION.bib) · [Citation metadata (CFF)](CITATION.cff). GitHub also provides **Cite this repository** in the sidebar. For reproducibility, record the archived release tag or commit, data build timestamp and access date. Acknowledge the original data providers for the observations used; their details are preserved in the downloads.
+
 ## Updates
 
 GitHub Actions checks the configured official sources every **Monday at 06:23 UTC**, validates the rebuilt outputs, and publishes successful builds to GitHub Pages. You can also run **Update worldwide R&D charts** manually. New ONS publication editions require reviewed mappings. See the automation guide for schedule limitations and maintenance.

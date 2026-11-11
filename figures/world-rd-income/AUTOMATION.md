@@ -44,6 +44,8 @@ figures/
     README.md
     AUTOMATION.md
     OFFICIAL_DATA.md
+    CITATION.cff
+    CITATION.bib
 ```
 
 The workflow is at [../../.github/workflows/update-world-rd-income.yml](../../.github/workflows/update-world-rd-income.yml) in this workspace. On GitHub's website, use **Add file → Create new file**, enter that exact `.github/workflows/update-world-rd-income.yml` path, paste its contents, and commit. Upload all source files shown under `figures/world-rd-income/` without flattening the folders. The public repository tracks source files; large generated `data/`, `output/` and `_site/` files are delivered through Pages and release assets. The refresh workflow generates them from fresh downloads.
@@ -92,6 +94,7 @@ Each successful deployment contains:
 - `world_rd_income_data.xlsx`: the workbook, including annual nominal R&D, inputs, coverage and definitions.
 - `basque_annual.csv`: reported EUR inputs, annual exchange/PPP factors, derived regional amounts/intensity and provenance; also included as a workbook sheet.
 - `world-rd-income.zip`: this build's raw responses and checksum/URL/timestamp manifest, annual historical data, workbook, figures, Python/HTML/CSS/JavaScript sources and checks, workflow, pinned requirements and documentation.
+- `CITATION.cff` and `CITATION.bib`: suggested-reference metadata, also included in the research ZIP and linked from the dashboard. The repository-root `CITATION.cff` enables GitHub's **Cite this repository** feature.
 
 The website publishes the latest successful build. Generated files are deployed as a Pages artifact; **the workflow does not commit refreshed files to the repository branch**. Download the ZIP when you need to retain a particular vintage for research. The raw files within that ZIP reproduce that build without another network request.
 

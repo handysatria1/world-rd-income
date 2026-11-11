@@ -5,4 +5,6 @@
 *.html text eol=lf
 *.md text eol=lf
 *.yml text eol=lf
+*.cff text eol=lf
+*.bib text eol=lf
 *.txt text eol=lf

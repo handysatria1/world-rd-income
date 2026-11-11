@@ -6,6 +6,14 @@ This extends the previous OECD reconstruction to worldwide available data. Scatt
 
 **Snapshot note:** Fixed-year numerical results, coverage counts, examples and captions below describe the initial **10 November 2026** snapshot. Historical responses were added on **11 November 2026**. Every rebuild generates [current static results and captions](data/current_results.md), current CSVs/workbook and dates on the interactive chart. Use those generated outputs after refreshing. [Automatic weekly refresh and GitHub Pages setup](AUTOMATION.md).
 
+## Suggested reference
+
+If you use this dashboard, code, derived datasets or figures, please cite:
+
+> Handy Satria. (2026). *Worldwide R&D and income explorer, 2000–2025* [Interactive dashboard and reproducible research software]. https://handysatria1.github.io/world-rd-income/
+
+[BibTeX](CITATION.bib) · [Citation metadata (CFF)](CITATION.cff). For reproducibility, record the archived release tag or commit, the data build timestamp and your access date. Acknowledge the original data providers for the observations used; exact source details are preserved in the downloads.
+
 ## Interactive explorer
 
 Open [world_rd_income_explorer.html](output/world_rd_income_explorer.html) in a browser. Data, styling and JavaScript are embedded in this single file, so it works offline without external libraries.
