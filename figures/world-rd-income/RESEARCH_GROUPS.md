@@ -43,6 +43,17 @@ Native labels support **partial** allocations only. Broader new groups resolve s
 
 ## Downloads and verification
 
+### Exploring the comparisons
+
+- **Compare economies**: one panel per selected economy, with paired horizontal GVA and assigned BERD bars. **Compare industries**: one panel per industry, comparing the selected economies. Both rank by GVA, descending; missing GVA ranks last and is never replaced with zero.
+- Manufacturing uses groups **03–07**; services uses **10–16**. The all-groups preset retains the full A–T partition. Presets select groups without renormalizing shares. GVA shares use the A–T total; BERD shares use reported industry R&D, including any unallocated activities.
+- Amounts use **current US$ billions**, with the same linear scale for GVA and BERD within each panel. Panels have individually labelled scales. Partial allocations remain hatched and do not purport to measure whole-group expenditure.
+- Latest/common paired years require at least one selected group with both GVA and BERD observations in that exact economy/year. Other groups can still be missing or partial and remain labelled. Fixed years never fall back to another observation.
+- **Compare years** uses one economy from the shared selection and up to three distinct exact years (default 2000, 2010, 2022), displayed chronologically. Its local years replace the shared reporting-year control for this layout. Toggle amounts/shares to compare historical levels or composition.
+- Endpoint changes compare the earliest and latest selected years. Share changes are **last minus first, in percentage points**. Amount changes are **100 × (last − first) / first, in percent**. Current-USD changes include inflation and exchange-rate movements; they are not real growth.
+- Changes are withheld for missing/partial endpoints, different sources or BERD scopes, or nonpositive amount baselines. Complete endpoints do not establish full time-series comparability: retained source flags and methodology changes still matter. The endpoint CSV includes input values, units, sources, scopes, flags, coverage and source expressions; the joined CSV retains all selected-year observations and national context.
+- In the original six-group view, **horizontal GVA/BERD stacks** preserve unallocated R&D explicitly and require same-year GVA and BERD. The original vertical GVA/BERD/employment stacks remain selectable and require all three metrics for latest/common-year selection.
+
 `research_groups.xlsx` contains classification, class bridge, metric-level annual data, joined observations, source terms and allocation audit. `research_group_components.csv` gives signed coefficients, scaled source values, exact source files/locators and flags. For original response hashes, use the preceding GVA/employment/BERD manifests in the research archive. `research_group_validation.json` records all input/output hashes.
 
 Rebuild with `research_groups.py`, verify with `verify_dashboard.py --site <staged-site>` after `build_site.py`. The dashboard loads per-economy research-group data on demand. Latest usable depends on the chosen measure; stacked comparisons require some usable values for all three metrics. Each actual selected year is displayed; fixed years never fall back to another year. A country without data remains visible as missing.

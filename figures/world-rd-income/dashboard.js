@@ -5,8 +5,8 @@ window.Dashboard=(()=>{
     ['snapshot','snapshot','Year snapshot','national','snapshot'],['compare','snapshot','Compare positions over time','national','compare'],['history','snapshot','Country history','national','history'],
     ['income','income','Four-panel income-group comparison',null,null],
     ['breakdown','national','Funding, performers & research types','national','breakdown'],['sector','national','Sector × scientific field','national','sector'],
-    ...[['composition','R&D composition & allocation'],['comparison','R&D, GVA & employment shares'],['intensity','Sector R&D / GVA'],['perWorker','R&D per employed person'],['productivity','R&D intensity versus productivity'],['trade','Manufacturing R&D & exports']].map(([k,t])=>['rd-'+k,'rd',t,'rd',k]),
-    ['research','rd','16 research groups · GVA, BERD & employment','research','comparison'],
+    ['research','rd','GVA & business R&D · economies, industries & years','research','comparison'],
+    ...[['comparison','Six-group shares · GVA, BERD & jobs'],['composition','R&D composition & allocation'],['intensity','Sector R&D / GVA'],['perWorker','R&D per employed person'],['productivity','R&D intensity versus productivity'],['trade','Manufacturing R&D & exports']].map(([k,t])=>['rd-'+k,'rd',t,'rd',k]),
     ['gva','economy','Gross value added · six groups','gva','gva'],
     ...[['employment','Employment by sector'],['comparison','GVA versus employment shares'],['sector','Productivity · sector panels'],['economy','Productivity · economy panels'],['exports','Goods-export composition']].map(([k,t])=>['economy-'+k,'economy',t,'economy',k]),
     ['detail','data','Detailed industry & native-source tables','detail','detail'],['sources','data','Sources, downloads & provenance','sources','sources']
@@ -76,7 +76,7 @@ window.Dashboard=(()=>{
       $('income-vintage').add(new Option('Current · '+data.currentVintage,'current'));for(const fy of data.historicalVintages)$('income-vintage').add(new Option(fy+' · fixed membership',fy));
       IncomeChart.initialize(data);chips();
       for(const id of ['view','shared-year','sample-scope'])$(id).addEventListener('change',update);
-      $('industry-classification').onchange=()=>navigate($('industry-classification').value==='research'?'research':'rd-composition');
+      $('industry-classification').onchange=()=>navigate($('industry-classification').value==='research'?'research':'rd-comparison');
       for(const id of ['income-vintage','income-filter','combine-middle'])$(id).addEventListener('change',()=>{chips();update();});
       for(const id of ['income-year-a','income-year-b','income-stat','income-sample','patent-mode'])$(id).addEventListener('change',update);
       $('economy-search').oninput=choices;$('example-economies').onclick=()=>{ids=[...defaults];chips();update();};$('clear-economies').onclick=()=>{ids=[];chips();update();};

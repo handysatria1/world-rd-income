@@ -66,7 +66,7 @@ def build_site(destination: Path) -> None:
         "rd_industry_site.py", "rd-industry.html", "rd_industry_core.js", "rd_industry_chart.js", "test_rd_industry.js", "RD_INDUSTRY.md",
         "rd_industry_details.py", "rd_coverage.js", "income_sources.py", "income_data.py", "income_core.js", "income_chart.js", "INCOME_GROUPS.md",
         "dashboard_site.py", "dashboard.html", "dashboard.css", "dashboard.js", "dashboard_bridge.js",
-        "research_groups.py", "research-groups.html", "research_group_chart.js", "RESEARCH_GROUPS.md", "verify_dashboard.py", "test_income.js",
+        "research_groups.py", "research-groups.html", "research_group_chart.js", "research_group_core.js", "research_compare_chart.js", "test_research_groups.js", "RESEARCH_GROUPS.md", "verify_dashboard.py", "test_income.js",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
         "nominal_rd.py", "test_nominal_rd.py",
         "sector_field_rd.py", "test_sector_field_rd.py", "verify_sector_field.py",

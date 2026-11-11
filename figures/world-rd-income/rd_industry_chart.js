@@ -1,7 +1,7 @@
 "use strict";
 const data=JSON.parse(document.getElementById("rd-industry-data").textContent),el=id=>document.getElementById(id),ns="http://www.w3.org/2000/svg";
 const countries=new Map(data.countries.map(c=>[c.iso,c]));let selected=data.defaults.slice(),current=[],csvRows=[],nativeCsvRows=[];
-const titles={composition:"Industry R&D by broad sector",comparison:"R&D, GVA and employment shares",intensity:"Business R&D as a share of sector GVA",perWorker:"Business R&D per employed person",productivity:"Sector R&D intensity and labour productivity",trade:"Manufacturing R&D and goods-export shares"};
+const titles={composition:"Industry R&D by broad sector",comparison:"GVA and business R&D · sector shares",intensity:"Business R&D as a share of sector GVA",perWorker:"Business R&D per employed person",productivity:"Sector R&D intensity and labour productivity",trade:"Manufacturing R&D and goods-export shares"};
 const fmt=(v,d=1)=>v===null||v===undefined?"Missing":Number(v).toLocaleString("en",{minimumFractionDigits:d,maximumFractionDigits:d});
 const short=s=>s.replaceAll("_"," "),bn=v=>v==null?null:v/1e9;
 function node(tag,attrs={},value){const n=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);if(value!==undefined)n.textContent=value;return n;}
@@ -16,15 +16,36 @@ function legend(svg,x,y){[...data.groups,{id:"UNALLOC",label:"Unallocated / reco
 function render(){
   el('coverage-tooltip').hidden=true;el('coverage-inspector').hidden=true;
   const kind=el("kind").value,mode=el("year").value,unit=el("unit").value,digits=Number(el("decimals").value),group=Number(el("group").value),panels=["intensity","perWorker","trade"].includes(kind);
+  const horizontal=kind==='comparison'&&el('comparison-layout').value==='horizontal';
+  el('comparison-layout-label').hidden=kind!=='comparison';el('unit').closest('label').hidden=kind!=='composition';el('group').closest('label').hidden=kind!=='productivity';el('chart').classList.toggle('horizontal',horizontal);
   el("unit").disabled=kind!=="composition";el("group").disabled=kind!=="productivity";
-  current=RDIndustry.select(data,selected,mode,kind,unit,group);
-  const width=Math.max(1450,selected.length*(kind==="comparison"?210:kind==="trade"?160:130)+420),height=panels?(kind==="trade"?650:880):740;
+  current=RDIndustry.select(data,selected,mode,horizontal?'pairedShares':kind,unit,group);
+  const width=horizontal?1250:Math.max(1450,selected.length*(kind==="comparison"?210:kind==="trade"?160:130)+420),height=horizontal?Math.max(580,current.length*106+350):panels?(kind==="trade"?650:880):740;
   const svg=node("svg",{xmlns:ns,width,height,viewBox:`0 0 ${width} ${height}`,role:"img","aria-labelledby":"chart-title chart-desc"});svg.append(node("title",{id:"chart-title"},el("title-input").value),node("desc",{id:"chart-desc"},"Reported-year industry R&D comparisons. Hatched segments are partial groups; grey is unallocated. Missing values and unavailable ratios are not zero."),node("rect",{width,height,fill:"white"}));
   const defs=node("defs"),pattern=node("pattern",{id:"partial",width:8,height:8,patternUnits:"userSpaceOnUse"});pattern.append(node("path",{d:"M-2,2 L2,-2 M0,8 L8,0 M6,10 L10,6",stroke:"white","stroke-opacity":.55,"stroke-width":2}));defs.append(pattern);svg.append(defs);
   text(svg,24,34,el("title-input").value,{"font-size":22,"font-weight":700});
-  const units=kind==="intensity"?"BERD / whole-sector GVA (%) · complete groups only":kind==="perWorker"?"current US$ per whole-sector employed person · complete groups only":kind==="productivity"?data.groups[group].label+" · complete R&D group only":kind==="trade"?"R&D share of reported BERD versus export share of all goods (%)":kind==="comparison"?"R&D / GVA / employment: each uses its own total denominator (%)":unit==="share"?"share of reported industry R&D total (%)":"current US$ billion";
+  const units=horizontal?'GVA: % of A–T total · BERD: % of reported industry R&D total':kind==="intensity"?"BERD / whole-sector GVA (%) · complete groups only":kind==="perWorker"?"current US$ per whole-sector employed person · complete groups only":kind==="productivity"?data.groups[group].label+" · complete R&D group only":kind==="trade"?"R&D share of reported BERD versus export share of all goods (%)":kind==="comparison"?"R&D / GVA / employment: each uses its own total denominator (%)":unit==="share"?"share of reported industry R&D total (%)":"current US$ billion";
   text(svg,24,60,(mode==="latest"?"Latest usable years":mode==="common"?"Latest common usable year":"Reporting year: "+mode)+" · "+units,{fill:"#526777"});
-  if(panels){
+  if(horizontal){
+    const left=235,top=115,w=970;
+    for(let k=0;k<=4;k++){const x=left+w*k/4;line(svg,x,top-15,x,top+current.length*106-10);text(svg,x,top-26,k*25+'%',{'text-anchor':'middle','font-size':12});}
+    current.forEach((a,i)=>{
+      const y=top+i*106,r=a.row;name(svg,83,y+20,countries.get(a.iso).display,150);text(svg,83,y+61,a.year??'No usable year',{'text-anchor':'middle','font-size':11});
+      for(const [j,key,label]of [[0,'gvaShares','GVA'],[1,'shares','BERD']]){
+        const by=y+j*35,good=j===0?r?.gvaShares.every(RDIndustry.finite):r?.stackAvailable;
+        text(svg,left-14,by+20,label,{'text-anchor':'end','font-size':12});
+        if(!good){text(svg,left+10,by+20,'— Missing '+label+' for this year',{'font-size':12,fill:'#526777'});continue;}
+        const values=j===0?r[key]:[...r.shares,r.remainingShare];let x=left;
+        values.forEach((v,k)=>{if(!RDIndustry.finite(v)||v<0)return;const bw=v/100*w,g=data.groups[k],partial=j===1&&k<6&&!r.complete[k],tip=(g?.label??'Unallocated / reconciliation')+': '+fmt(v,3)+'%';
+          bar(svg,x,by,bw,27,g?.color??'#cbd2d9',tip,partial,j===1&&k<6?[r,k]:null);
+          if(bw>45)text(svg,x+bw/2,by+18,fmt(v,digits)+'%',{'text-anchor':'middle','font-size':11,fill:k===6?'#172f42':'white'});x+=bw;
+        });
+      }
+    });
+    const legendY=top+current.length*106+20;
+    [...data.groups,{id:'UNALLOC',label:'Unallocated / reconciliation',color:'#cbd2d9'}].forEach((g,i)=>{const x=24+i%3*410,y=legendY+Math.floor(i/3)*25;bar(svg,x,y,14,14,g.color,g.label);text(svg,x+22,y+12,g.id+' · '+g.label,{'font-size':11});});
+    bar(svg,434,legendY+50,20,14,'#526777','Partial coverage',true);text(svg,462,legendY+62,'Hatched = partial activity coverage',{'font-size':11});
+  }else if(panels){
     const trade=kind==="trade",count=trade?2:6,columns=trade?2:3,pw=(width-40)/columns,ph=330;
     for(let p=0;p<count;p++){
       const x=24+(p%columns)*pw,y=105+Math.floor(p/columns)*ph,left=x+60,top=y+25,w=pw-85,h=190;
@@ -63,7 +84,7 @@ function render(){
   const good=current.filter(a=>a.available),years=[...new Set(current.filter(a=>a.row).map(a=>a.year))].sort();
   el("status").textContent=`${good.length} of ${selected.length} economies meet this chart’s R&D data requirements. `+(years.length?"Selected year(s): "+years.join(", ")+". ":"")+(years.length>1?"Different reporting years are shown. ":"")+"Partial groups are never used as full-group ratios.";
   const notes=current.filter(a=>!a.available||a.row?.classifiedShare<99.999).map(a=>countries.get(a.iso).display+": "+(!a.available?short(a.reason)+"; required R&D data unavailable":fmt(a.row.classifiedShare)+"% assigned; "+short(a.row.status)));
-  el("missing").hidden=!notes.length;el("missing").textContent=notes.join("; ");for(const id of["svg","png","print"])el(id).disabled=!good.length;el("csv").disabled=!current.some(a=>a.row);table();nativeTable();
+  el("missing").hidden=!notes.length;el("missing").textContent=notes.join("; ");const drawable=horizontal?current.some(a=>a.row?.stackAvailable||a.row?.gvaShares.every(RDIndustry.finite)):good.length;for(const id of["svg","png","print"])el(id).disabled=!drawable;el("csv").disabled=!current.some(a=>a.row);table();nativeTable();
 }
 function nativeTable(){
   el("native-body").replaceChildren();
@@ -96,6 +117,7 @@ el("print").onclick=()=>window.print();el("clear").onclick=()=>{selected=[];choo
 for(let y=2025;y>=2000;y--){const o=document.createElement("option");o.value=y;o.textContent=y;el("year").append(o);}el("year").value=String(data.defaultYear);
 data.groups.forEach((g,i)=>{const o=document.createElement("option");o.value=i;o.textContent=g.label;el("group").append(o);});
 el("coverage-note").textContent="Singapore: RIE 2023 adds partial MHT, LMT, KIS and LIS values. RIE totals fill 2014–2022; those years have no industry split. Original OECD detail is retained through 2013. Use 2023 to see the workbook’s industry values.";
+el('comparison-layout').addEventListener('change',()=>{titles.comparison=el('comparison-layout').value==='horizontal'?'GVA and business R&D · sector shares':'R&D, GVA and employment shares';el('title-input').value=titles.comparison;render();});
 el("kind").addEventListener("change",()=>{el("title-input").value=titles[el("kind").value];render();});for(const id of["year","unit","group","decimals"])el(id).addEventListener("change",render);el("title-input").addEventListener("input",render);choose();render();
 el('coverage-close').onclick=()=>el('coverage-inspector').hidden=true;
 if(typeof dashboardBridge!=='undefined')dashboardBridge.register({set({ids,year,kind,names}){selected=ids;for(const iso of ids)if(!countries.has(iso))countries.set(iso,{iso,name:names[iso],display:names[iso]});if(el('kind').value!==kind){el('kind').value=kind;el('title-input').value=titles[kind];}el('year').value=year;choose();render();},get rows(){return current;}});

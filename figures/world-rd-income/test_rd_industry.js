@@ -10,6 +10,9 @@ assert.equal(core.available({...row,intensity:Array(6).fill(null)},"intensity"),
 assert.equal(core.available(row,"productivity","share",1),false);
 assert.equal(core.available({...row,totalUSD:null},"composition","share"),true);
 assert.equal(core.available({...row,totalUSD:null},"composition","amount"),false);
+assert.equal(core.available({...row,employmentShares:Array(6).fill(null)},'pairedShares'),true);
+assert.equal(core.available({...row,gvaShares:Array(6).fill(null)},'pairedShares'),false);
+assert.equal(core.available({...row,employmentShares:Array(6).fill(null)},'comparison'),false);
 if(process.argv.includes("--built")){
   const built=JSON.parse(fs.readFileSync("data/rd_industry_explorer.json","utf8"));
   const examples=core.select(built,built.defaults,"2022","composition");

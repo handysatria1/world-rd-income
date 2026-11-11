@@ -20,7 +20,7 @@ def build_dashboard(destination):
         (destination/name).write_bytes((source or ROOT/name).read_bytes());files.append(name)
     def compressed(name,body):
         (destination/name).write_bytes(gzip.compress(body,mtime=0));files.append(name)
-    for name in ['dashboard.css','dashboard.js','income_core.js','income_chart.js','dashboard_bridge.js','research_group_chart.js','INCOME_GROUPS.md','RESEARCH_GROUPS.md']:
+    for name in ['dashboard.css','dashboard.js','income_core.js','income_chart.js','dashboard_bridge.js','research_group_core.js','research_compare_chart.js','research_group_chart.js','INCOME_GROUPS.md','RESEARCH_GROUPS.md']:
         copy(name)
     for name in ['income_explorer.json','income_classifications.csv','innovation_annual.csv','income_validation.json',
                  'research_group_classification.csv','research_group_bridge.csv','research_group_coverage.csv','research_groups.xlsx','research_group_validation.json']:

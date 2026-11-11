@@ -7,6 +7,7 @@ const RDIndustry=(()=>{
     if(kind==="productivity")return finite(r.intensity[group])&&finite(r.productivity[group]);
     if(kind==="trade")return r.stackAvailable&&r.shares.slice(0,2).some((v,i)=>finite(v)&&finite(r.exportShares[i]));
     if(kind==="comparison")return r.stackAvailable&&r.gvaShares.every(finite)&&r.employmentShares.every(finite);
+    if(kind==="pairedShares")return r.stackAvailable&&r.gvaShares.every(finite);
     return r.stackAvailable&&(unit==="share"||finite(r.totalUSD));
   }
   function select(data,ids,mode,kind,unit="share",group=0){

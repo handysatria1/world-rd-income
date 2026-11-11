@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Industry R&amp;D and the economy · Handy Satria</title>
 <style>__STYLE__
-#coverage-tooltip{position:fixed;z-index:100;background:#fff;color:#172f42;border:1px solid #9bafb9;border-radius:10px;box-shadow:0 8px 30px #172f4233;padding:16px;max-width:min(560px,92vw);max-height:60vh;overflow:auto;font-size:13px;pointer-events:none}#coverage-tooltip p{margin:7px 0}#coverage-detail p{overflow-wrap:anywhere}#chart svg text{pointer-events:none}[data-rd-group]:focus{outline:3px solid #172f42;outline-offset:2px}
+#coverage-tooltip{position:fixed;z-index:100;background:#fff;color:#172f42;border:1px solid #9bafb9;border-radius:10px;box-shadow:0 8px 30px #172f4233;padding:16px;max-width:min(560px,92vw);max-height:60vh;overflow:auto;font-size:13px;pointer-events:none}#coverage-tooltip p{margin:7px 0}#coverage-detail p{overflow-wrap:anywhere}#chart svg text{pointer-events:none}#chart.horizontal svg{min-width:700px}[data-rd-group]:focus{outline:3px solid #172f42;outline-offset:2px}
 </style></head><body><main>
 <nav><a href="index.html">← R&amp;D–income dashboard</a><a href="sector-economy.html">Employment, productivity and exports</a><a href="broad-sectors.html">GVA charts</a><a href="RD_INDUSTRY.md">Methods and sources</a></nav>
 <h1>Industry R&amp;D and the economy</h1><p>R&amp;D classified into your six sector groups, joined to the same-year GVA, employment, productivity and goods exports. Data assembly: <strong>Handy Satria</strong>.</p>
@@ -9,6 +9,7 @@
 <section class="card settings"><h2>Build your chart</h2><div class="controls">
 <label>Chart layout<select id="kind"><option value="composition">R&amp;D composition and allocation coverage</option><option value="comparison">R&amp;D, GVA and employment shares</option><option value="intensity">Sector R&amp;D / GVA</option><option value="perWorker">Sector R&amp;D per employed person</option><option value="productivity">R&amp;D intensity versus productivity</option><option value="trade">Manufacturing R&amp;D and goods-export shares</option></select></label>
 <label>Reporting year<select id="year"><option value="latest">Latest usable year per economy</option><option value="common">Latest common usable year</option></select></label>
+<label id="comparison-layout-label" hidden>Compare shares<select id="comparison-layout"><option value="horizontal">GVA &amp; business R&amp;D · horizontal</option><option value="vertical">GVA, R&amp;D &amp; jobs · vertical</option></select></label>
 <label>Stack measure<select id="unit"><option value="share">Share of reported R&amp;D total (%)</option><option value="amount">Current US$ billion</option></select></label>
 <label>Scatter sector<select id="group"></select></label><label>Label precision<select id="decimals"><option value="1">One decimal place</option><option value="0">Whole numbers</option></select></label>
 <label>Chart title<input id="title-input" maxlength="110" value="Industry R&amp;D by broad sector"></label></div>
