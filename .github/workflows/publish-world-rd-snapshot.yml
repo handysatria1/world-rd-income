@@ -41,7 +41,8 @@ jobs:
           printf '%s  %s\n' "$SNAPSHOT_SHA256" "$RUNNER_TEMP/validated-site/pages-site.zip" | sha256sum --check
           unzip -q "$RUNNER_TEMP/validated-site/pages-site.zip" -d "$GITHUB_WORKSPACE/_site"
           test -s "$GITHUB_WORKSPACE/_site/index.html"
-          test -s "$GITHUB_WORKSPACE/_site/world-rd-income.zip"
+          test -s "$GITHUB_WORKSPACE/_site/world-rd-income.zip" || \
+            test -s "$GITHUB_WORKSPACE/_site/downloads_manifest.json"
       - name: Upload validated website
         uses: actions/upload-pages-artifact@v4
         with:

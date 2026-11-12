@@ -12,6 +12,10 @@ The [industry R&D/economy extension](RD_INDUSTRY.md) refreshes OECD RDS main-act
 
 Project website: **https://handysatria1.github.io/world-rd-income/**. Source repository and archived releases: **https://github.com/handysatria1/world-rd-income**.
 
+### Large downloads are hosted separately
+
+After validating the full build and offline archive, the update workflow runs `release_downloads.py`. Download-only research ZIP, Excel, CSV/CSV.gz and PDF files of at least 5 MB are published to a unique GitHub Release. Their website links are pinned to that release and their unchanged SHA-256 digests are verified before deployment. Interactive JSON, compressed chart partitions, HTML and JavaScript stay on Pages. `downloads_manifest.json` records locations and checksums. The final slim website must remain below 1 GB. See [DOWNLOAD_HOSTING.md](DOWNLOAD_HOSTING.md) for migration, permissions and reproduction details. Earlier full-site snapshots remain restorable; newer snapshots use the download manifest instead of keeping the research ZIP on Pages.
+
 ## 1. Upload the source files
 
 Use this layout in your GitHub repository, on its **default branch** (usually `main`):

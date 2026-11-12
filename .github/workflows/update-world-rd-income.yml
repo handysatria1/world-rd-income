@@ -24,6 +24,9 @@ jobs:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: write
+      pages: read
     defaults:
       run:
         working-directory: figures/world-rd-income
@@ -52,7 +55,7 @@ jobs:
           node test_rd_industry.js
           node test_income.js
       - name: Check R&D units, annual joins and sector-field accounting
-        run: python -m unittest test_nominal_rd.py test_sector_field_rd.py
+        run: python -m unittest test_nominal_rd.py test_sector_field_rd.py test_release_downloads.py
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Refresh OECD, World Bank, UNESCO, Eustat and ONS data
@@ -102,7 +105,15 @@ jobs:
           node test_research_groups.js --built
           python build_site.py --destination "$GITHUB_WORKSPACE/_site"
           python verify_broad_site.py --site "$GITHUB_WORKSPACE/_site"
-          python verify_dashboard.py --site "$GITHUB_WORKSPACE/_site"
+          python verify_dashboard.py --site "$GITHUB_WORKSPACE/_site" --before-distribution
+      - name: Publish large downloads separately from Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python release_downloads.py --site "$GITHUB_WORKSPACE/_site" \
+            --assets "$RUNNER_TEMP/rd-downloads" --repository "$GITHUB_REPOSITORY" \
+            --release-tag "data-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --publish --target "$GITHUB_SHA"
       - name: Add current results to run summary
         run: cat data/current_results.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload validated website

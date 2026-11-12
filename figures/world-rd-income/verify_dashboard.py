@@ -22,7 +22,7 @@ def same(a,b):
     return a is None and b is None or a is not None and b is not None and math.isclose(a,b,rel_tol=1e-11,abs_tol=.01)
 
 
-def verify(stage):
+def verify(stage,before_distribution=False):
     data=ROOT/'data'
     report=json.loads((data/'research_group_validation.json').read_text('utf-8'))
     for name,sha in report['input_sha256'].items():assert digest(data/name)==sha,name
@@ -117,13 +117,18 @@ def verify(stage):
             body=archive.read('world-rd-income/figures/world-rd-income/data/income_raw/'+name)
             assert hashlib.sha256(body).hexdigest()==info['sha256']
     site_bytes=sum(p.stat().st_size for p in stage.rglob('*') if p.is_file())
-    assert site_bytes<1_000_000_000,site_bytes
+    if not before_distribution:
+        assert site_bytes<1_000_000_000,site_bytes
     result={'verification':'passed','metric_group_values_recomputed':count,'complete_group_ratios_checked':ratio_checks,
             'original_source_terms_checked':source_checks,'research_workbook_rows_checked':workbook_rows,'site_bytes':site_bytes,
-            'group_16_U_exclusion':'passed','UK_KIS_coverage_explanation':'passed','income_classifications':'passed'}
+            'group_16_U_exclusion':'passed','UK_KIS_coverage_explanation':'passed','income_classifications':'passed',
+            'distribution_stage':'before_release_offload' if before_distribution else 'full_site',
+            'final_pages_size_check':'release_downloads.py' if before_distribution else 'passed'}
     (stage/'dashboard_verification.json').write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(result,indent=2))
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--site',type=Path,required=True);verify(parser.parse_args().site)
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--site',type=Path,required=True)
+    parser.add_argument('--before-distribution',action='store_true',help='Validate the combined staging area; release_downloads.py checks final Pages size')
+    args=parser.parse_args();verify(args.site,args.before_distribution)
