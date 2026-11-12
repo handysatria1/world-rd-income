@@ -4,7 +4,6 @@ import gzip
 import csv
 from collections import defaultdict
 from pathlib import Path
-from analysis_site import build_analysis_site
 
 ROOT=Path(__file__).resolve().parent
 
@@ -89,5 +88,4 @@ def build_dashboard(destination):
         redirect=f'<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Open dashboard</title><meta http-equiv="refresh" content="0;url=index.html#{view}"><a href="index.html#{view}">Open this view in the unified dashboard</a></html>'
         (destination/name).write_text(redirect,encoding='utf-8')
     put('index.html',(ROOT/'dashboard.html').read_text('utf-8'))
-    files.extend(build_analysis_site(destination))
     return files

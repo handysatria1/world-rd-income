@@ -68,7 +68,6 @@ def build_site(destination: Path) -> None:
         "rd_industry_details.py", "rd_coverage.js", "income_sources.py", "income_data.py", "income_core.js", "income_chart.js", "innovation_chart.js", "INCOME_GROUPS.md",
         "basque_innovation_sources.py", "basque_innovation.py", "verify_basque_innovation.py",
         "dashboard_site.py", "dashboard.html", "dashboard.css", "dashboard.js", "dashboard_bridge.js",
-        "analysis_site.py", "analysis.html", "analysis.js", "ANALYSED_STUDY.md", "test_analysis_site.py",
         "research_groups.py", "research-groups.html", "research_group_chart.js", "research_group_core.js", "research_compare_chart.js", "test_research_groups.js", "RESEARCH_GROUPS.md", "verify_dashboard.py", "test_income.js",
         "government_industry_sources.py", "government_industry.py", "verify_government_industry.py", "official_industry_chart.js", "GOVERNMENT_INDUSTRIES.md",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",
@@ -78,7 +77,6 @@ def build_site(destination: Path) -> None:
         "breakdown_sources.py", "breakdown_rd.py", "breakdown_figures.py", "breakdown_core.js",
         "test_breakdown.js", "verify_breakdown.py", "official_sources.py", "official_rd.py",
     )]
-    files += [p for p in (ROOT / "analysis").rglob("*") if p.is_file()]
     files += [p for p in (ROOT / "data").rglob("*") if p.is_file() and p.suffix in {".json", ".csv", ".xml", ".xlsx", ".md", ".html", ".zip", ".px", ".pdf", ".hwpx"}]
     files += [p for p in (ROOT / "output").iterdir() if p.is_file() and p.suffix in {".html", ".png", ".svg", ".pdf"}]
     with ZipFile(destination / "world-rd-income.zip", "w", ZIP_DEFLATED) as archive:
