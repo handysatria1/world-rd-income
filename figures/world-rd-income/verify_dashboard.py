@@ -13,6 +13,7 @@ from openpyxl import load_workbook
 
 from income_sources import ROOT
 from industry_data import read_csv, digest
+from absorptive_capacity import METRICS
 from rd_industry_mapping import Classification
 from research_groups import SPECS
 from sector_field_rd import FLAGS
@@ -118,6 +119,48 @@ def verify(stage,before_distribution=False):
             assert cell['countryMatch']==('iso3' if source_iso3 else 'iso2_country_catalog')
             matched+=1
     assert matched>0
+    capacity=json.loads((data/'absorptive_capacity.json').read_text('utf-8'))
+    assert capacity['builtUTC']==income['builtUTC'] and capacity['current_vintage']==income['currentVintage']
+    assert capacity['first_year']==2000 and capacity['last_year']==2025
+    country_means=read_csv(data/'absorptive_capacity_country.csv')
+    expected_countries={c['iso']:c for c in income['countries'] if not c.get('region')}
+    assert {r['iso3'] for r in country_means}==set(expected_countries)
+    country_mean_lookup={}
+    for row in country_means:
+        country=expected_countries[row['iso3']]
+        assert row['current_income_code']==country['current']
+        country_mean_lookup[row['iso3']]={}
+        for metric in METRICS:
+            observations=sorted((int(year),cell['v']) for year,cell in country['series'].get(metric['key'],{}).items()
+                                if 2000<=int(year)<=2025 and cell['v'] is not None)
+            mean=math.fsum(value for _,value in observations)/len(observations) if observations else None
+            assert int(row[metric['slug']+'_n_years'])==len(observations)
+            assert row[metric['slug']+'_first_year']==(str(observations[0][0]) if observations else '')
+            assert row[metric['slug']+'_last_year']==(str(observations[-1][0]) if observations else '')
+            actual=float(row[metric['column']]) if row[metric['column']] else None
+            assert actual is None and mean is None or actual is not None and mean is not None and math.isclose(actual,mean,rel_tol=1e-12,abs_tol=1e-12)
+            country_mean_lookup[row['iso3']][metric['key']]=mean
+    group_csv=read_csv(data/'absorptive_capacity_groups.csv')
+    assert len(group_csv)==len(capacity['group_averages'])
+    group_csv_lookup={(r['classification_vintage'],r['income_group_code'],r['metric']):r for r in group_csv}
+    assert len(group_csv_lookup)==len(group_csv)
+    for group in capacity['group_averages']:
+        key=(group['classification_vintage'],group['income_group_code'],group['metric'])
+        exported=group_csv_lookup[key]
+        memberships=[]
+        for country in expected_countries.values():
+            code=country['current'] if group['classification_vintage']==income['currentVintage'] else country.get('history',{}).get(group['classification_vintage'],'UNK')
+            if code==group['income_group_code'] or group['income_group_code']=='MIC' and code in {'UMC','LMC'}:
+                memberships.append(country['iso'])
+        values=[country_mean_lookup[iso][group['metric']] for iso in memberships if country_mean_lookup[iso][group['metric']] is not None]
+        mean=math.fsum(values)/len(values) if values else None
+        assert group['economies_in_group']==len(memberships) and group['economies_with_data']==len(values)
+        assert mean is None and group['mean_of_country_means'] is None or mean is not None and math.isclose(mean,group['mean_of_country_means'],rel_tol=1e-12,abs_tol=1e-12)
+        assert exported['indicator']==group['indicator'] and exported['economies_in_group']==str(len(memberships))
+        exported_mean=float(exported['mean_of_country_means']) if exported['mean_of_country_means'] else None
+        assert exported_mean is None and mean is None or exported_mean is not None and math.isclose(exported_mean,mean,rel_tol=1e-12,abs_tol=1e-12)
+    for name in ['absorptive_capacity.json','absorptive_capacity_country.csv','absorptive_capacity_groups.csv']:
+        assert digest(stage/name)==digest(data/name),name
     workbook_rows=0
     book=load_workbook(data/'research_groups.xlsx',read_only=True,data_only=True)
     for name in ['research_group_classification','research_group_bridge','research_group_annual','research_group_joined','research_group_components','research_group_coverage']:
@@ -145,6 +188,10 @@ def verify(stage,before_distribution=False):
     dashboard_js=(stage/'dashboard.js').read_text('utf-8')
     for view in ["'internet-users'", "'government-effectiveness-score'", "'government-effectiveness'", "'human-capital'", "'bachelor-attainment'"]:
         assert view in dashboard_js,view
+    assert "'absorptive-capacity'" in dashboard_js
+    assert 'AbsorptiveCapacityChart' in dashboard_js
+    assert (stage/'absorptive_capacity.json').is_file()
+    assert (stage/'absorptive_capacity_chart.js').is_file()
     site_bytes=sum(p.stat().st_size for p in stage.rglob('*') if p.is_file())
     if not before_distribution:
         assert site_bytes<300_000_000,site_bytes
@@ -152,6 +199,9 @@ def verify(stage,before_distribution=False):
             'original_source_terms_checked':source_checks,'research_workbook_rows_checked':workbook_rows,'site_bytes':site_bytes,
             'group_16_U_exclusion':'passed','UK_KIS_coverage_explanation':'passed','income_classifications':'passed',
             'income_indicator_source_matches':matched,'negative_WGI_estimate':'passed',
+            'absorptive_capacity_country_means':len(country_means),
+            'absorptive_capacity_group_rows':len(group_csv),
+            'absorptive_capacity_source_recalculation':'passed',
             'distribution_stage':'before_release_offload' if before_distribution else 'full_site',
             'final_pages_size_check':'release_downloads.py' if before_distribution else 'passed'}
     (stage/'dashboard_verification.json').write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8')

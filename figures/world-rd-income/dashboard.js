@@ -9,6 +9,7 @@ window.Dashboard=(()=>{
     ['government-effectiveness','income','Government effectiveness estimate by economy',null,'governmentEffectivenessEstimate'],
     ['human-capital','income','Human Capital Index by economy',null,'humanCapitalIndex'],
     ['bachelor-attainment','income',"Bachelor's attainment by economy",null,'bachelorAttainment'],
+    ['absorptive-capacity','income','Absorptive-capacity averages by income group',null,'capacity'],
     ['income','income','R&D and innovation by income group',null,null],
     ['breakdown','national','R&D funding and performance','national','breakdown'],['sector','national','R&D by sector and field','national','sector'],
      ['research','rd','Value added and business R&D','research','comparison'],
@@ -19,7 +20,7 @@ window.Dashboard=(()=>{
     ['detail','data','Industry data tables','detail','detail'],['sources','data','Definitions and sources','sources','sources']
   ];
   const files={national:'view-national.html',rd:'view-rd.html',gva:'view-gva.html',economy:'view-economy.html',research:'view-research.html',researchsix:'view-research-six.html',detail:'view-detail.html',sources:'view-sources.html'};
-  let data=null,ids=[...defaults],frames=new Map(),request=0;
+  let data=null,capacity=null,ids=[...defaults],frames=new Map(),request=0;
   const names=()=>Object.fromEntries(data.countries.map(c=>[c.iso,c.name]));
   const group=iso=>IncomeCore.classify(data,iso,$('income-vintage').value,$('combine-middle').checked);
   function matches(iso){const f=$('income-filter').value,c=IncomeCore.classify(data,iso,$('income-vintage').value,false).code;return f==='all'||f===c||(f==='MIC'&&['UMC','LMC'].includes(c));}
@@ -56,16 +57,18 @@ window.Dashboard=(()=>{
   async function update(){
     if(!data)return;const token=++request,view=views.find(v=>v[0]===$('view').value),[id,section,,key]=view;
     $('dashboard-error').hidden=true;$('loading').hidden=true;for(const {iframe}of frames.values())iframe.hidden=true;
+    const capacityView=view[4]==='capacity';
     const innovation=['researchers','patents','publications','internetUsers','governmentEffectiveness','governmentEffectivenessEstimate','humanCapitalIndex','bachelorAttainment'].includes(view[4]);
-    $('income-panel').hidden=id!=='income';$('innovation-panel').hidden=!innovation;document.querySelectorAll('[data-section]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.section===section));
+    $('income-panel').hidden=id!=='income';$('innovation-panel').hidden=!innovation;$('capacity-panel').hidden=!capacityView;document.querySelectorAll('[data-section]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.section===section));
     const global=['snapshot','compare','income'].includes(id),hasYear=innovation||['snapshot','sector','research','research-six','gva','detail'].includes(id)||id.startsWith('rd-')||id.startsWith('economy-');
-    $('scope-label').hidden=!global;$('shared-year-label').hidden=!hasYear;$('economy-settings').hidden=id==='sources';
+    $('scope-label').hidden=!global;$('shared-year-label').hidden=!hasYear;$('economy-settings').hidden=id==='sources'||capacityView;
     $('classification-control').hidden=!['rd','economy'].includes(section);$('industry-classification').value=id==='research'?'research':'six';
-    $('year-help').textContent=innovation?'Compare selected economies. Latest available uses each economy’s latest observation; latest common year requires data for every selected economy. Choose an exact year for a fixed-year comparison.':id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
+    $('year-help').textContent=innovation?'Compare selected economies. Latest available uses each economy’s latest observation; latest common year requires data for every selected economy. Choose an exact year for a fixed-year comparison.':id==='absorptive-capacity'?'Country and income-group averages use observed annual data from 2000–2025; choose an indicator and World Bank classification vintage below.':id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
     history.replaceState(null,'','#'+id);
     try{
       const state=selection();
       if(id==='income'){IncomeChart.render(data,state);return;}
+      if(capacityView){AbsorptiveCapacityChart.render(capacity,state);return;}
       if(innovation){InnovationChart.render(data,state);return;}
       const entry=frame(key);$('loading').hidden=false;const iframe=await entry.promise;
       if(token!==request)return;
@@ -78,16 +81,22 @@ window.Dashboard=(()=>{
   }
   function navigate(id){if(!views.some(v=>v[0]===id))id='snapshot';$('view').value=id;update();}
   async function initialize(){
-    try{const response=await fetch('income_explorer.json');if(!response.ok)throw new Error('Income dataset unavailable ('+response.status+').');data=await response.json();
+    try{
+      const [response,capacityResponse]=await Promise.all([fetch('income_explorer.json'),fetch('absorptive_capacity.json')]);
+      if(!response.ok)throw new Error('Income dataset unavailable ('+response.status+').');
+      if(!capacityResponse.ok)throw new Error('Absorptive-capacity averages unavailable ('+capacityResponse.status+').');
+      [data,capacity]=await Promise.all([response.json(),capacityResponse.json()]);
+      if(capacity.builtUTC!==data.builtUTC)throw new Error('Income and absorptive-capacity data builds do not match.');
       const sections={snapshot:'Income & R&D',income:'Innovation',national:'National R&D',rd:'Industry R&D',economy:'Economy & trade',data:'Data & sources'};
       for(const [key,label]of Object.entries(sections)){const g=document.createElement('optgroup');g.label=label;for(const v of views.filter(v=>v[1]===key))g.append(new Option(v[2],v[0]));$('view').append(g);}
       for(let year=2025;year>=2000;year--)$('shared-year').add(new Option(year,year));
       $('income-vintage').add(new Option('Current · '+data.currentVintage,'current'));for(const fy of data.historicalVintages)$('income-vintage').add(new Option(fy+' · fixed membership',fy));
-      IncomeChart.initialize(data);InnovationChart.initialize();chips();
+      IncomeChart.initialize(data);InnovationChart.initialize();AbsorptiveCapacityChart.initialize(capacity);chips();
       for(const id of ['view','shared-year','sample-scope'])$(id).addEventListener('change',update);
       $('industry-classification').onchange=()=>navigate($('industry-classification').value==='research'?'research':'research-six');
       for(const id of ['income-vintage','income-filter','combine-middle'])$(id).addEventListener('change',()=>{chips();update();});
       for(const id of ['income-year-a','income-year-b','income-stat','income-sample','patent-mode','innovation-patent-mode','innovation-scale'])$(id).addEventListener('change',update);
+      for(const id of ['capacity-metric','capacity-vintage','capacity-combine'])$(id).addEventListener('change',update);
       $('economy-search').oninput=choices;$('example-economies').onclick=()=>{ids=[...defaults];chips();update();};$('clear-economies').onclick=()=>{ids=[];chips();update();};
       $('use-selection').onclick=()=>{$('sample-scope').value='selected';update();};
       document.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(views.find(v=>v[1]===b.dataset.section)[0]));

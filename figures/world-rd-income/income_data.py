@@ -10,6 +10,7 @@ from zipfile import ZipFile
 
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
+from absorptive_capacity import build_absorptive_capacity
 from income_sources import ROOT, RAW, INDICATORS
 from basque_innovation import load_basque_innovation
 
@@ -163,15 +164,23 @@ def build():
     payload = {'builtUTC': datetime.now(timezone.utc).isoformat(), 'currentVintage': vintage, 'classificationNotes': notes,
                'historicalVintages': sorted(set(fiscal.values()), reverse=True), 'indicators': metadata,
                'countries': sorted(countries.values(), key=lambda c: c['name']), 'sources': manifest, 'regionalSources': regional_manifest}
+    capacity = build_absorptive_capacity(payload)
     write_csv('income_classifications.csv', classifications)
     write_csv('innovation_annual.csv', annual)
     write_csv('basque_innovation_annual.csv', regional_annual)
     (DATA / 'income_explorer.json').write_text(json.dumps(payload, ensure_ascii=False, separators=(',', ':'), allow_nan=False) + '\n', encoding='utf-8')
+    write_csv('absorptive_capacity_country.csv', capacity['country_rows'])
+    write_csv('absorptive_capacity_groups.csv', capacity['group_rows'])
+    (DATA / 'absorptive_capacity.json').write_text(
+        json.dumps(capacity['json'], ensure_ascii=False, separators=(',', ':'), allow_nan=False) + '\n', encoding='utf-8')
     report = {'validation': 'passed', 'built_utc': payload['builtUTC'], 'current_vintage': vintage,
               'classification_rows': len(classifications), 'indicator_rows_including_missing': len(annual),
+              'absorptive_capacity_countries': len(capacity['country_rows']),
+              'absorptive_capacity_group_rows': len(capacity['group_rows']),
               'checks': ['archived_hashes', 'official_current_historical_agreement', 'unique_country_year_indicator',
                           'finite_values_and_indicator_specific_ranges', 'WDI_aggregates_and_regions_excluded', 'ISO2_country_catalog_fallback', 'source_cell_locators',
-                          'Eustat_hashes_requests_coordinates', 'population_midyear_proxy_flagged', 'EIS_indicators_separate'],
+                          'Eustat_hashes_requests_coordinates', 'population_midyear_proxy_flagged', 'EIS_indicators_separate',
+                          'country_means_observed_years_only', 'income_group_means_equal_country_weight'],
                'regional_rows_including_missing': len(regional_annual),
               'note': 'Historical workbook Parameters sheet still says FY21; classification columns and current notes explicitly extend to ' + vintage + '. Parameters is not used.'}
     (DATA / 'income_validation.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')

@@ -20,9 +20,10 @@ def build_dashboard(destination):
         (destination/name).write_bytes((source or ROOT/name).read_bytes());files.append(name)
     def compressed(name,body):
         (destination/name).write_bytes(gzip.compress(body,mtime=0));files.append(name)
-    for name in ['dashboard.css','dashboard.js','income_core.js','income_chart.js','innovation_chart.js','dashboard_bridge.js','research_group_core.js','research_compare_chart.js','research_group_chart.js','official_industry_chart.js','INCOME_GROUPS.md','RESEARCH_GROUPS.md','GOVERNMENT_INDUSTRIES.md']:
+    for name in ['dashboard.css','dashboard.js','income_core.js','income_chart.js','innovation_chart.js','absorptive_capacity_chart.js','dashboard_bridge.js','research_group_core.js','research_compare_chart.js','research_group_chart.js','official_industry_chart.js','INCOME_GROUPS.md','RESEARCH_GROUPS.md','GOVERNMENT_INDUSTRIES.md']:
         copy(name)
     for name in ['income_explorer.json','income_classifications.csv','innovation_annual.csv','basque_innovation_annual.csv','income_validation.json',
+                 'absorptive_capacity.json','absorptive_capacity_country.csv','absorptive_capacity_groups.csv',
                  'research_group_classification.csv','research_group_bridge.csv','research_group_coverage.csv','research_groups.xlsx','research_group_validation.json']:
         copy(name,ROOT/'data'/name)
     for name in ['research_group_annual.csv','research_group_joined.csv','research_group_components.csv']:

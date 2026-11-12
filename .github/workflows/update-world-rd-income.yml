@@ -97,6 +97,8 @@ jobs:
           python income_sources.py --refresh
           python basque_innovation_sources.py --refresh
           python income_data.py
+          python -m unittest test_absorptive_capacity.py
+          node test_absorptive_capacity_chart.js
           python verify_basque_innovation.py
           python government_industry_sources.py --refresh
           python government_industry.py
