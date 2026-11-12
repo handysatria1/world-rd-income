@@ -2,6 +2,8 @@
 
 **[Open the interactive dashboard](https://handysatria1.github.io/world-rd-income/)**
 
+**[Analysed study · frozen 2022 evidence](https://handysatria1.github.io/world-rd-income/#analysis):** 83 economies, internet use and government-effectiveness estimates, 36 conditional associations, 120 comparable-intensity pairs and 19 manufacturing standardisations. Includes interactive tables/charts, CSV/SVG exports, papers, policy brief, methods guide, workbooks and a hash-pinned offline reproduction package. This dated study is separate from refreshed indicators. [Definitions and limitations](figures/world-rd-income/ANALYSED_STUDY.md).
+
 Explore worldwide R&D intensity, income, funding, performing sectors and research types over **2000–2025**, including Basque Country. Choose years, 3-/5-year averages or custom windows, compare historical positions, and download each chart as CSV or SVG.
 
 **[Create a six-sector GVA stacked chart](https://handysatria1.github.io/world-rd-income/broad-sectors.html):** select and reorder economies, choose latest/common/explicit years, and download PNG/SVG/CSV. Includes 80 economies plus Basque Country, the supplied SIC-based classification, totals, source years and an Excel workbook. [Methods](figures/world-rd-income/BROAD_SECTORS.md).
@@ -29,7 +31,7 @@ If you use this dashboard, code, derived datasets or figures, please cite:
 
 GitHub Actions checks the configured official sources every **Monday at 06:23 UTC**, validates the rebuilt outputs, and publishes successful builds to GitHub Pages. You can also run **Update worldwide R&D charts** manually. New ONS publication editions require reviewed mappings. See the automation guide for schedule limitations and maintenance.
 
-The public branch tracks source code. Generated datasets, the self-contained offline HTML, chart downloads and reproducibility archives are published through the website and releases.
+The public branch tracks source code and the small hash-pinned frozen study package. Live generated datasets, the self-contained offline HTML, chart downloads and full reproducibility archives are published through the website and releases.
 
 ## Reproduce
 

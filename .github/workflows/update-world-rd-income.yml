@@ -52,7 +52,7 @@ jobs:
           node test_rd_industry.js
           node test_income.js
       - name: Check R&D units, annual joins and sector-field accounting
-        run: python -m unittest test_nominal_rd.py test_sector_field_rd.py
+        run: python -m unittest test_nominal_rd.py test_sector_field_rd.py test_analysis_site.py
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Refresh OECD, World Bank, UNESCO, Eustat and ONS data

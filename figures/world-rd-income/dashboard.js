@@ -11,9 +11,10 @@ window.Dashboard=(()=>{
     ...[['comparison','Sector shares: GVA, R&D and employment'],['composition','Business R&D by sector'],['intensity','Business R&D (% of sector GVA)'],['perWorker','Business R&D per worker'],['productivity','R&D intensity and productivity'],['trade','Manufacturing R&D and exports']].map(([k,t])=>['rd-'+k,'rd',t,'rd',k]),
     ['gva','economy','Gross value added by sector','gva','gva'],
     ...[['employment','Employment by sector'],['comparison','GVA and employment shares'],['sector','Productivity by sector'],['economy','Productivity by economy'],['exports','Goods exports by sector']].map(([k,t])=>['economy-'+k,'economy',t,'economy',k]),
-    ['detail','data','Industry data tables','detail','detail'],['sources','data','Definitions and sources','sources','sources']
+     ['analysis','analysis','Frozen global study · 2022 evidence','analysis','analysis'],
+     ['detail','data','Industry data tables','detail','detail'],['sources','data','Definitions and sources','sources','sources']
   ];
-  const files={national:'view-national.html',rd:'view-rd.html',gva:'view-gva.html',economy:'view-economy.html',research:'view-research.html',researchsix:'view-research-six.html',detail:'view-detail.html',sources:'view-sources.html'};
+   const files={national:'view-national.html',rd:'view-rd.html',gva:'view-gva.html',economy:'view-economy.html',research:'view-research.html',researchsix:'view-research-six.html',detail:'view-detail.html',sources:'view-sources.html',analysis:'analysis.html'};
   let data=null,ids=[...defaults],frames=new Map(),request=0;
   const names=()=>Object.fromEntries(data.countries.map(c=>[c.iso,c.name]));
   const group=iso=>IncomeCore.classify(data,iso,$('income-vintage').value,$('combine-middle').checked);
@@ -57,7 +58,8 @@ window.Dashboard=(()=>{
     $('scope-label').hidden=!global;$('shared-year-label').hidden=!hasYear;$('economy-settings').hidden=id==='sources';
     $('classification-control').hidden=!['rd','economy'].includes(section);$('industry-classification').value=id==='research'?'research':'six';
     $('year-help').textContent=innovation?'Compare selected economies. Latest available uses each economy’s latest observation; latest common year requires data for every selected economy. Choose an exact year for a fixed-year comparison.':id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
-    history.replaceState(null,'','#'+id);
+     if(id==='analysis')$('year-help').textContent='Frozen study dated 11 November 2026. Main observations: 2022; HCI: 2020. The study has its own sample control; published correlations, weights and model samples are never refitted by dashboard filters.';
+     history.replaceState(null,'','#'+id);
     try{
       const state=selection();
       if(id==='income'){IncomeChart.render(data,state);return;}
@@ -74,7 +76,7 @@ window.Dashboard=(()=>{
   function navigate(id){if(!views.some(v=>v[0]===id))id='snapshot';$('view').value=id;update();}
   async function initialize(){
     try{const response=await fetch('income_explorer.json');if(!response.ok)throw new Error('Income dataset unavailable ('+response.status+').');data=await response.json();
-      const sections={snapshot:'Income & R&D',income:'Innovation',national:'National R&D',rd:'Industry R&D',economy:'Economy & trade',data:'Data & sources'};
+       const sections={snapshot:'Income & R&D',income:'Innovation',national:'National R&D',rd:'Industry R&D',economy:'Economy & trade',analysis:'Analysed study',data:'Data & sources'};
       for(const [key,label]of Object.entries(sections)){const g=document.createElement('optgroup');g.label=label;for(const v of views.filter(v=>v[1]===key))g.append(new Option(v[2],v[0]));$('view').append(g);}
       for(let year=2025;year>=2000;year--)$('shared-year').add(new Option(year,year));
       $('income-vintage').add(new Option('Current · '+data.currentVintage,'current'));for(const fy of data.historicalVintages)$('income-vintage').add(new Option(fy+' · fixed membership',fy));

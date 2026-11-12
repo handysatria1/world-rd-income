@@ -1,0 +1,12 @@
+{
+  "study": "Global R&D and income study",
+  "vintage": "2026-11-11",
+  "main_observation_year": 2022,
+  "package": "Global_RD_Income_Study.zip",
+  "sha256": "02ef8ef376f89895d130c5b74f4e183cac8611314f72239e4aef60210b96c83d",
+  "original_upstream_archive_sha256": "5094ee093f0abd22a335ccaaf5d0da8c8ba5fa0e453244ad6023877901ddc9eb",
+  "local_source": "World_RD_Income_Paper_2026-11-11/Global",
+  "government_effectiveness": {"indicator": "GOV_WGI_GE.EST", "source": 3, "unit": "estimate", "not_equivalent_to": "GOV_WGI_GE_SC (0–100 governance score)"},
+  "internet_use": {"indicator": "IT.NET.USER.ZS", "source": 2, "unit": "% of population"},
+  "scope": "Frozen descriptive analysis; live refresh does not replace or refit this study. See the package research audit for observation years, flags, source provenance, samples and limitations."
+}
