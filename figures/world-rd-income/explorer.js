@@ -498,8 +498,15 @@
         stat(view==="compare"?"Economies at both endpoints":"Economies plotted",current.rows.length);
         stat("Complete R&D coverage",current.rows.filter(r=>r.end.rd.complete&&(!r.start||r.start.rd.complete)).length);
         stat("Economies in regression",fitRows.length);
-        if(view==="compare") {const fit=core.ols(fitRows.map(r=>({x:r.start[opts.metric],y:r.start.rd.value})));stat(`R² · ${opts.from}`,fit?fmt(fit.r2,3):"—");}
+        if(view==="compare") {
+          const earlyPoints=fitRows.map(r=>({x:r.start[opts.metric],y:r.start.rd.value}));
+          const fit=core.ols(earlyPoints),rho=core.spearman(earlyPoints);
+          stat(`R² · ${opts.from}`,fit?fmt(fit.r2,3):"—");
+          stat(`Spearman ρ · ${opts.from}`,rho?fmt(rho.rho,3):"—");
+        }
         stat(`R² · ${current.latest?'plotted years':view==="compare"?opts.to:opts.gdpYear}`,endFit?fmt(endFit.r2,3):"—");
+        const endPoints=fitRows.map(r=>({x:r.end[opts.metric],y:r.end.rd.value})),endRho=core.spearman(endPoints);
+        stat(`Spearman ρ · ${current.latest?'plotted years':view==="compare"?opts.to:opts.gdpYear}`,endRho?fmt(endRho.rho,3):"—");
         $("legend").innerHTML=(view==="compare"?`<span><b class="key">□ → ●</b>${opts.from} → ${opts.to}; faint dashed fit = earlier year</span>`:"")+ '<span><b class="key">●</b>All R&D years reported</span><span><b class="key">○</b>Incomplete R&D window</span><span>Dotted curve: R&D = a + b ln(GDP)</span>';
         if(shared)$('legend').textContent=(shared.combine?'● High · ◆ Middle · ▲ Low · × Unclassified/region':'● High · ■ Upper-middle · ◆ Lower-middle · ▲ Low · × Unclassified/region')+' income · '+(shared.vintage==='current'?shared.income.currentVintage:shared.vintage)+'. Filled: complete R&D window; hollow: incomplete. '+(view==='compare'?'Earlier positions: outlined squares. ':'')+'Dotted curve: R&D = a + b ln(GDP); group/sample filters refit it.';
         scatter(current,opts);plottedTable(current,opts);

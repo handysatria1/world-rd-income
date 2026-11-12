@@ -15,7 +15,7 @@ import shutil
 import subprocess
 from urllib.parse import quote, unquote, urlsplit
 
-LIMIT = 1_000_000_000
+LIMIT = 300_000_000
 HREF = re.compile(r'''(\bhref\s*=\s*)(["'])(.*?)\2''', re.I)
 
 
@@ -134,7 +134,7 @@ def verify(site, assets, manifest):
               'scope': 'Checksums, rewritten and remaining links, and final Pages size. Remote assets are checked at publication.'}
     path = site / 'download_distribution_verification.json'
     path.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
-    assert sum(p.stat().st_size for p in site.rglob('*') if p.is_file()) < LIMIT, 'Pages exceeds 1 GB'
+    assert sum(p.stat().st_size for p in site.rglob('*') if p.is_file()) < LIMIT, 'Pages exceeds 300 MB'
     return report
 
 

@@ -118,7 +118,7 @@ def verify(stage,before_distribution=False):
             assert hashlib.sha256(body).hexdigest()==info['sha256']
     site_bytes=sum(p.stat().st_size for p in stage.rglob('*') if p.is_file())
     if not before_distribution:
-        assert site_bytes<1_000_000_000,site_bytes
+        assert site_bytes<300_000_000,site_bytes
     result={'verification':'passed','metric_group_values_recomputed':count,'complete_group_ratios_checked':ratio_checks,
             'original_source_terms_checked':source_checks,'research_workbook_rows_checked':workbook_rows,'site_bytes':site_bytes,
             'group_16_U_exclusion':'passed','UK_KIS_coverage_explanation':'passed','income_classifications':'passed',

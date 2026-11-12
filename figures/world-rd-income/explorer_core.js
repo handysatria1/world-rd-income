@@ -154,7 +154,29 @@
     const xy = xs.reduce((a, v, i) => a + (v - mx) * (ys[i] - my), 0);
     return {n, intercept: my - xy / xx * mx, slope: xy / xx, r2: Math.max(0, Math.min(1, xy * xy / (xx * yy)))};
   }
-  const api = {range, checkYears, pickSource, rdSummary, snapshot, latestSnapshot, comparison, history, sectorField, ols, regressionRows, SOURCE_NAMES};
+  function spearman(points) {
+    if (points.length < 3 || points.some(p => !Number.isFinite(p.x) || p.x <= 0 || !Number.isFinite(p.y))) return null;
+    const ranks = values => {
+      const order = values.map((value, index) => ({value, index})).sort((a, b) => a.value - b.value);
+      const result = Array(values.length);
+      for (let start = 0; start < order.length;) {
+        let end = start + 1;
+        while (end < order.length && order[end].value === order[start].value) end++;
+        const rank = (start + 1 + end) / 2;
+        for (let i = start; i < end; i++) result[order[i].index] = rank;
+        start = end;
+      }
+      return result;
+    };
+    const xs = ranks(points.map(p => p.x)), ys = ranks(points.map(p => p.y)), n = points.length;
+    const mx = (n + 1) / 2, my = (n + 1) / 2;
+    const xx = xs.reduce((sum, value) => sum + (value - mx) ** 2, 0);
+    const yy = ys.reduce((sum, value) => sum + (value - my) ** 2, 0);
+    if (xx <= 0 || yy <= 0) return null;
+    const xy = xs.reduce((sum, value, index) => sum + (value - mx) * (ys[index] - my), 0);
+    return {n, rho: xy / Math.sqrt(xx * yy)};
+  }
+  const api = {range, checkYears, pickSource, rdSummary, snapshot, latestSnapshot, comparison, history, sectorField, ols, spearman, regressionRows, SOURCE_NAMES};
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.RDCore = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

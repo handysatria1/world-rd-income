@@ -213,8 +213,8 @@ def build_site(destination: Path) -> None:
                 archive.writestr('world-rd-income/' + name, text)
             else:
                 archive.write(destination / name, 'world-rd-income/' + name)
-    # Keep the Pages artifact below its 1 GB limit. The research ZIP retains
-    # ordinary CSVs; these two large standalone downloads are losslessly gzipped.
+    # Keep the Pages artifact below the 300 MB deployment target. The research
+    # ZIP retains ordinary CSVs; these two large standalone downloads are losslessly gzipped.
     compressed_downloads=['rd_breakdown_annual.csv','rd_sector_field_annual.csv']
     for name in compressed_downloads:
         path=destination/name

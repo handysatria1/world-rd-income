@@ -53,6 +53,9 @@ assert.throws(()=>core.comparison(data,{...options,from:2023}),/different GDP ye
 assert.throws(()=>core.history(data,"UNKNOWN",2010,2025),/Choose a country/);
 const fit=core.ols([{x:Math.exp(1),y:1},{x:Math.exp(2),y:3},{x:Math.exp(3),y:5}]);
 assert.ok(Math.abs(fit.slope-2)<1e-12 && Math.abs(fit.intercept+1)<1e-12 && Math.abs(fit.r2-1)<1e-12);
+assert.ok(Math.abs(core.spearman([{x:1,y:3},{x:2,y:1},{x:3,y:2}]).rho+.5)<1e-12);
+assert.ok(Math.abs(core.spearman([{x:1,y:1},{x:1,y:2},{x:2,y:2}]).rho-.5)<1e-12);
+assert.equal(core.spearman([{x:1,y:1},{x:2,y:1},{x:3,y:1}]),null);
 assert.equal(core.ols([{x:1,y:1},{x:2,y:2}]),null);
 assert.equal(core.ols([{x:1,y:2},{x:2,y:2},{x:3,y:2}]),null);
 assert.equal(core.ols([{x:0,y:1},{x:2,y:2},{x:3,y:4}]),null);
@@ -76,7 +79,7 @@ assert.match(cells.rows.find(r=>r.CONF_STATUS).flag_descriptions,/Confidential/)
 assert.equal(cells.rows.filter(r=>r.availability==="not_returned").length,3);
 assert.equal(core.sectorField(data,"A",2023,"USD_PPP_Q").rows.find(r=>r.amount!==null).base_year,"2020");
 assert.equal(core.sectorField(data,"A",2025,"XDC_V").sourceCells,0);
-console.log("Explorer checks passed: windows, missingness, zeros, source selection, paired cohorts, history gaps, nominal provenance, sector/field selection and logarithmic OLS.");
+console.log("Explorer checks passed: windows, missingness, source selection, paired cohorts, history gaps, nominal provenance, sector/field selection, OLS and tied-rank Spearman.");
 
 // Regions keep their own provider even in an empty window and never enter a
 // country regression merely because they are selected or highlighted.

@@ -1,6 +1,6 @@
 # Large downloads in Releases; interactive website on Pages
 
-Pages has a 1 GB site-size limit. Releases have a separate allowance: each asset must be smaller than 2 GiB, with no stated total release-size limit. See GitHub's [Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits) and [release limits](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases#storage-and-bandwidth-quotas).
+The deployment enforces a stricter 300,000,000-byte Pages artifact ceiling. Releases have a separate allowance: each asset must be smaller than 2 GiB, with no stated total release-size limit. See GitHub's [Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits) and [release limits](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases#storage-and-bandwidth-quotas).
 
 `release_downloads.py` runs **after** the full staged site, workbooks and offline research ZIP have been verified. It relocates root-level download-only ZIP, Excel, CSV/CSV.gz and PDF files of at least 5,000,000 bytes into a separate release-upload directory, preserving their bytes. HTML, JavaScript, JSON, JSON.gz partitions, small tables and images remain on Pages. No chart fetches are redirected to GitHub Releases; they remain same-origin. It rewrites only HTML download anchors, not scripts, data values or chart controls.
 
