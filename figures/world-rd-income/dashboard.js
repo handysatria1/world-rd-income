@@ -4,6 +4,11 @@ window.Dashboard=(()=>{
   const views=[
     ['snapshot','snapshot','R&D expenditure and income','national','snapshot'],['compare','snapshot','Compare two years','national','compare'],['history','snapshot','Trends by economy','national','history'],
     ['researchers','income','Researchers by economy',null,'researchers'],['patents','income','Patent applications by economy',null,'patents'],['publications','income','Journal articles by economy',null,'publications'],
+    ['internet-users','income','Internet users by economy',null,'internetUsers'],
+    ['government-effectiveness-score','income','Government effectiveness score (0–100)',null,'governmentEffectiveness'],
+    ['government-effectiveness','income','Government effectiveness estimate by economy',null,'governmentEffectivenessEstimate'],
+    ['human-capital','income','Human Capital Index by economy',null,'humanCapitalIndex'],
+    ['bachelor-attainment','income',"Bachelor's attainment by economy",null,'bachelorAttainment'],
     ['income','income','R&D and innovation by income group',null,null],
     ['breakdown','national','R&D funding and performance','national','breakdown'],['sector','national','R&D by sector and field','national','sector'],
      ['research','rd','Value added and business R&D','research','comparison'],
@@ -51,7 +56,7 @@ window.Dashboard=(()=>{
   async function update(){
     if(!data)return;const token=++request,view=views.find(v=>v[0]===$('view').value),[id,section,,key]=view;
     $('dashboard-error').hidden=true;$('loading').hidden=true;for(const {iframe}of frames.values())iframe.hidden=true;
-    const innovation=['researchers','patents','publications'].includes(id);
+    const innovation=['researchers','patents','publications','internetUsers','governmentEffectiveness','governmentEffectivenessEstimate','humanCapitalIndex','bachelorAttainment'].includes(view[4]);
     $('income-panel').hidden=id!=='income';$('innovation-panel').hidden=!innovation;document.querySelectorAll('[data-section]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.section===section));
     const global=['snapshot','compare','income'].includes(id),hasYear=innovation||['snapshot','sector','research','research-six','gva','detail'].includes(id)||id.startsWith('rd-')||id.startsWith('economy-');
     $('scope-label').hidden=!global;$('shared-year-label').hidden=!hasYear;$('economy-settings').hidden=id==='sources';

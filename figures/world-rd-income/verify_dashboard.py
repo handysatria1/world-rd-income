@@ -92,6 +92,32 @@ def verify(stage,before_distribution=False):
     lookup={c['iso']:c for c in income['countries']}
     assert lookup['GBR']['current']=='HIC' and lookup['CHN']['current']=='UMC' and lookup['IND']['current']=='LMC'
     assert lookup['ES-PV']['current']=='UNK' and lookup['ES-PV']['region']
+    indicators={'internetUsers':'IT.NET.USER.ZS','governmentEffectiveness':'GOV_WGI_GE_SC',
+                'governmentEffectivenessEstimate':'GOV_WGI_GE.EST','humanCapitalIndex':'HD.HCI.OVRL',
+                'bachelorAttainment':'SE.TER.CUAT.BA.ZS'}
+    assert all(income['indicators'][key]['code']==code for key,code in indicators.items())
+    assert any(cell['v']<0 for c in income['countries'] for cell in c['series'].get('governmentEffectivenessEstimate',{}).values() if cell['v'] is not None)
+    assert any(cell['v'] is not None for c in income['countries'] for cell in c['series'].get('governmentEffectiveness',{}).values())
+    catalog=json.loads((data/'income_raw/countries.json').read_text('utf-8'))[1]
+    iso2_to_iso3={r['iso2Code']:r['id'] for r in catalog if r.get('iso2Code') and r.get('id') and (r.get('region') or {}).get('id')!='NA'}
+    matched=0
+    for key in ['internetUsers','governmentEffectivenessEstimate','humanCapitalIndex','bachelorAttainment']:
+        _,records=json.loads((data/'income_raw'/f'{key}.json').read_text('utf-8'))
+        for position,record in enumerate(records,1):
+            year=int(record['date'])
+            if not 2000<=year<=2025:continue
+            source_iso3=record.get('countryiso3code') or ''
+            source_code=(record.get('country') or {}).get('id') or ''
+            iso=source_iso3 or iso2_to_iso3.get(source_code,'')
+            country=lookup.get(iso)
+            if country is None or country.get('region'):continue
+            cell=country['series'].get(key,{}).get(str(year))
+            assert cell is not None,(key,iso,year)
+            assert cell['record']==position and cell['v']==record['value'],(key,iso,year,cell,record)
+            assert cell['countryCode']==source_code
+            assert cell['countryMatch']==('iso3' if source_iso3 else 'iso2_country_catalog')
+            matched+=1
+    assert matched>0
     workbook_rows=0
     book=load_workbook(data/'research_groups.xlsx',read_only=True,data_only=True)
     for name in ['research_group_classification','research_group_bridge','research_group_annual','research_group_joined','research_group_components','research_group_coverage']:
@@ -116,12 +142,16 @@ def verify(stage,before_distribution=False):
         for name,info in json.loads((data/'income_raw/manifest.json').read_text('utf-8')).items():
             body=archive.read('world-rd-income/figures/world-rd-income/data/income_raw/'+name)
             assert hashlib.sha256(body).hexdigest()==info['sha256']
+    dashboard_js=(stage/'dashboard.js').read_text('utf-8')
+    for view in ["'internet-users'", "'government-effectiveness-score'", "'government-effectiveness'", "'human-capital'", "'bachelor-attainment'"]:
+        assert view in dashboard_js,view
     site_bytes=sum(p.stat().st_size for p in stage.rglob('*') if p.is_file())
     if not before_distribution:
         assert site_bytes<300_000_000,site_bytes
     result={'verification':'passed','metric_group_values_recomputed':count,'complete_group_ratios_checked':ratio_checks,
             'original_source_terms_checked':source_checks,'research_workbook_rows_checked':workbook_rows,'site_bytes':site_bytes,
             'group_16_U_exclusion':'passed','UK_KIS_coverage_explanation':'passed','income_classifications':'passed',
+            'income_indicator_source_matches':matched,'negative_WGI_estimate':'passed',
             'distribution_stage':'before_release_offload' if before_distribution else 'full_site',
             'final_pages_size_check':'release_downloads.py' if before_distribution else 'passed'}
     (stage/'dashboard_verification.json').write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8')

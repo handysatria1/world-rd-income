@@ -29,6 +29,10 @@ The plotted CSV contains statistics, method, sample, classification vintage and 
 
 ## Country-level indicators
 
+Alongside the existing Internet-users series (`IT.NET.USER.ZS`) and 0–100 government-effectiveness score (`GOV_WGI_GE_SC`), the country explorer includes the separate WGI government-effectiveness estimate (`GOV_WGI_GE.EST`, which may be negative), Human Capital Index (`HD.HCI.OVRL`, non-annual), and cumulative bachelor's attainment among people ages 25+ (`SE.TER.CUAT.BA.ZS`). When a World Bank API record lacks ISO3, the pipeline maps its source country code through the archived World Bank country catalog. Values are joined by economy and exact year; missing years are not filled.
+
+The 0–100 governance score remains distinct from the WGI estimate. It is retrieved from the official World Bank CSV ZIP, with source-cell locators retained in the annual data export. Indicator-specific value ranges are checked during the build. The dashboard provides a separate country view for each measure and preserves reported years and missing observations.
+
 Under **Innovation**, choose **Researchers by economy**, **Patent applications by economy** or **Journal articles by economy**. These views use the shared selection of up to 16 economies, in the selected order, and the shared income-group filter. Each row is an individual observation, without group aggregation. Each view offers **Total / Per million people**, remembering its selection. Researchers are full-time equivalents (FTE), not headcounts. Patent applicants can be residents, nonresidents, or their derived office total.
 
 WDI researchers are natively a population rate; total FTE is **calculated** as rate × same-year `SP.POP.TOTL` / 1,000,000. Patent/article rates are **calculated** as count / same-year population × 1,000,000. A conversion requires positive finite population from that exact year; no different-year denominator is substituted. These conversions inherit the source precision and vintages, and do not constitute independently reported totals. The WDI population snapshot is archived separately with its own retrieval/update dates.

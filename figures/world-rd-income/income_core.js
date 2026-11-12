@@ -29,6 +29,7 @@
     const join=(key,fallback,separator=';')=>keys.map((k,i)=>cells[i]?.provenance?.[key]??fallback(k,cells[i],meta[i])).join(separator);
     return {indicator:join('indicator',(k,cell,m)=>m.code||k,' + '),source_file:join('source_file',(k,cell,m)=>m.source_file||k+'.json'),
       source_record:join('source_record',(k,cell)=>cell?.record??'not returned'),source_values:join('source_values',(k,cell)=>cell?.v??'missing'),
+      source_country_code:join('source_country_code',(k,cell)=>cell?.countryCode||''),country_match:join('country_match',(k,cell)=>cell?.countryMatch||''),
       flags:join('flags',(k,cell)=>cell?.flags||''),notes:join('notes',(k,cell)=>cell?.note||''),
       source_url:join('source_url',(k,cell,m)=>m.url||''),source_organization:join('source_organization',(k,cell,m)=>m.organization||''),
       api_lastupdated:join('api_lastupdated',(k,cell,m)=>m.updated||''),retrieved_utc:join('retrieved_utc',(k,cell,m)=>m.retrieved||'')};

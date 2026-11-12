@@ -2,9 +2,11 @@
 import csv
 from datetime import datetime, timezone
 import hashlib
+from io import StringIO
 import json
 import math
 import re
+from zipfile import ZipFile
 
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
@@ -13,6 +15,37 @@ from basque_innovation import load_basque_innovation
 
 DATA = ROOT / 'data'
 GROUPS = {'High income': 'HIC', 'Upper middle income': 'UMC', 'Lower middle income': 'LMC', 'Low income': 'LIC'}
+
+
+def governance_score_observations(path):
+    """Read the exact WDI 0–100 governance-score CSV from its official ZIP archive."""
+    with ZipFile(path) as archive:
+        member = next(name for name in archive.namelist()
+                      if name.startswith('API_GOV_WGI_GE_SC_') and name.endswith('.csv'))
+        rows = list(csv.reader(StringIO(archive.read(member).decode('utf-8-sig'))))
+        metadata_member = next(name for name in archive.namelist()
+                               if name.startswith('Metadata_Indicator_API_GOV_WGI_GE_SC_') and name.endswith('.csv'))
+        definition_rows = list(csv.reader(StringIO(archive.read(metadata_member).decode('utf-8-sig'))))
+    header_position = next(i for i, row in enumerate(rows) if row and row[0] == 'Country Name')
+    header = rows[header_position]
+    years = [(i, int(value)) for i, value in enumerate(header) if value.isdigit() and 2000 <= int(value) <= 2025]
+    assert {year for _, year in years} == set(range(2000, 2026))
+    updated = next((row[1] for row in rows[:header_position] if row and row[0] == 'Last Updated Date'), '')
+    assert definition_rows[1][0] == 'GOV_WGI_GE_SC'
+    definition = {'id': definition_rows[1][0], 'name': definition_rows[1][1],
+                  'sourceNote': definition_rows[1][2], 'sourceOrganization': definition_rows[1][3]}
+    observations = []
+    for row_number, row in enumerate(rows[header_position + 1:], header_position + 2):
+        if not row or not row[0] or row[3] != 'GOV_WGI_GE_SC':
+            continue
+        for column, year in years:
+            raw = row[column]
+            observations.append({'indicator': {'id': 'GOV_WGI_GE_SC'}, 'date': str(year),
+                                 'countryiso3code': row[1], 'country': {'id': row[1], 'value': row[0]},
+                                 'value': float(raw) if raw else None, '_source_record': f'{member}:row {row_number}, column {column + 1}',
+                                 '_source_file': 'governmentEffectiveness.zip', '_source_country_code': row[1],
+                                 '_country_match': 'iso3'})
+    return {'lastupdated': updated, 'sourceid': '2'}, observations, definition
 
 
 def write_csv(name, rows):
@@ -69,31 +102,59 @@ def build():
     for c in national['countries']:
         countries.setdefault(c['iso'], {'iso': c['iso'], 'name': c['name'], 'current': 'UNK', 'history': {}, 'series': {}})
         countries[c['iso']]['region'] = c.get('geographyType') == 'region'
+    country_catalog = json.loads((RAW / 'countries.json').read_text('utf-8'))
+    assert country_catalog[0]['pages'] == 1 and len(country_catalog[1]) == country_catalog[0]['total']
+    iso2_to_iso3 = {row['iso2Code']: row['id'] for row in country_catalog[1]
+                    if row.get('iso2Code') and row.get('id') and (row.get('region') or {}).get('id') != 'NA'}
     metadata, annual = {}, []
     for metric, (code, label, unit) in INDICATORS.items():
-        meta, observations = json.loads((RAW / (metric + '.json')).read_text('utf-8'))
-        assert meta['pages'] == 1 and len(observations) == meta['total']
-        definition = json.loads((RAW / (metric + '_metadata.json')).read_text('utf-8'))[1][0]
+        if metric == 'governmentEffectiveness':
+            source_file = metric + '.zip'
+            meta, observations, definition = governance_score_observations(RAW / source_file)
+        else:
+            source_file = metric + '.json'
+            meta, observations = json.loads((RAW / source_file).read_text('utf-8'))
+            assert meta['pages'] == 1 and len(observations) == meta['total']
+            definition = json.loads((RAW / (metric + '_metadata.json')).read_text('utf-8'))[1][0]
         assert definition['id'] == code
         metadata[metric] = {'code': code, 'label': label, 'unit': unit, 'definition': definition['sourceNote'],
                             'organization': definition['sourceOrganization'], 'updated': meta.get('lastupdated', ''),
-                            'retrieved': manifest[metric + '.json']['retrieved_utc'], 'url': manifest[metric + '.json']['url']}
+                            'retrieved': manifest[source_file]['retrieved_utc'], 'url': manifest[source_file]['url'],
+                            'source_file': source_file}
         seen = set()
         for record, r in enumerate(observations, 1):
-            iso, year = r['countryiso3code'], int(r['date'])
-            assert r['indicator']['id'] == code and 2000 <= year <= 2025
+            year = int(r['date'])
+            assert r['indicator']['id'] == code
+            if not 2000 <= year <= 2025:
+                continue
+            source_iso3 = r.get('countryiso3code') or ''
+            source_country_code = r.get('_source_country_code') or (r.get('country') or {}).get('id') or ''
+            iso = source_iso3 or iso2_to_iso3.get(source_country_code, '')
             if iso not in countries or countries[iso].get('region'):
                 continue
             assert (iso, year) not in seen
             seen.add((iso, year))
             value = r['value']
-            assert value is None or (math.isfinite(value) and value >= 0)
-            countries[iso]['series'].setdefault(metric, {})[str(year)] = {'v': value, 'flags': r.get('obs_status', ''), 'note': r.get('footnote', ''), 'record': record}
+            assert value is None or math.isfinite(value)
+            if value is not None:
+                if metric == 'humanCapitalIndex':
+                    assert 0 <= value <= 1, (metric, iso, year, value)
+                elif metric in {'internetUsers', 'bachelorAttainment', 'governmentEffectiveness'}:
+                    assert 0 <= value <= 100, (metric, iso, year, value)
+                elif metric != 'governmentEffectivenessEstimate':
+                    assert value >= 0, (metric, iso, year, value)
+            match_method = r.get('_country_match') or ('iso3' if source_iso3 else 'iso2_country_catalog' if iso else 'unmatched')
+            source_record = r.get('_source_record', record)
+            source_file = r.get('_source_file', source_file)
+            countries[iso]['series'].setdefault(metric, {})[str(year)] = {
+                'v': value, 'flags': r.get('obs_status', ''), 'note': r.get('footnote', ''), 'record': source_record,
+                'countryCode': source_country_code, 'sourceISO3': source_iso3, 'countryMatch': match_method}
             annual.append({'iso3': iso, 'economy': countries[iso]['name'], 'year': year, 'metric': metric, 'indicator': code,
                            'value': value, 'unit': unit, 'availability': 'reported' if value is not None else 'missing',
-                           'obs_status': r.get('obs_status', ''), 'footnote': r.get('footnote', ''), 'source_file': metric + '.json',
-                           'source_record': record, 'api_lastupdated': meta.get('lastupdated', ''),
-                           'retrieved_utc': manifest[metric + '.json']['retrieved_utc']})
+                           'obs_status': r.get('obs_status', ''), 'footnote': r.get('footnote', ''), 'source_file': source_file,
+                           'source_record': source_record, 'source_country_code': source_country_code, 'source_iso3': source_iso3,
+                           'country_match': match_method, 'api_lastupdated': meta.get('lastupdated', ''),
+                           'retrieved_utc': metadata[metric]['retrieved']})
     series, regional_meta, context, regional_annual, regional_manifest = load_basque_innovation()
     assert countries['ES-PV']['region']
     countries['ES-PV']['series'].update(series)
@@ -109,7 +170,7 @@ def build():
     report = {'validation': 'passed', 'built_utc': payload['builtUTC'], 'current_vintage': vintage,
               'classification_rows': len(classifications), 'indicator_rows_including_missing': len(annual),
               'checks': ['archived_hashes', 'official_current_historical_agreement', 'unique_country_year_indicator',
-                          'finite_nonnegative_values', 'WDI_aggregates_and_regions_excluded', 'source_cell_locators',
+                          'finite_values_and_indicator_specific_ranges', 'WDI_aggregates_and_regions_excluded', 'ISO2_country_catalog_fallback', 'source_cell_locators',
                           'Eustat_hashes_requests_coordinates', 'population_midyear_proxy_flagged', 'EIS_indicators_separate'],
                'regional_rows_including_missing': len(regional_annual),
               'note': 'Historical workbook Parameters sheet still says FY21; classification columns and current notes explicitly extend to ' + vintage + '. Parameters is not used.'}

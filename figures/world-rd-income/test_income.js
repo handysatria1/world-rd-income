@@ -45,6 +45,13 @@ r=countries.rows[1];assert.equal(r.source_record,'20;30');assert.equal(r.source_
 assert.equal(core.countryObservations(individuals,{...one,metric:'patents',patents:'total',year:'common'}).commonYear,2000);
 r=core.countryObservations(individuals,{...one,metric:'patents',patents:'total',year:2022}).rows[1];assert.equal(r.value,null);assert.equal(r.source_values,'10;missing');assert.equal(r.source_record,'21;32');
 r=core.countryObservations(individuals,{...one,metric:'patents',patents:'nonresident'}).rows[1];assert.equal(r.year,2021);assert.equal(r.value,8);assert.equal(r.indicator,'IP.PAT.NRES');
+individuals.indicators.governmentEffectivenessEstimate={code:'GOV_WGI_GE.EST',unit:'estimate (approximately -2.5 to +2.5)',updated:'WGI update',retrieved:'WGI retrieval',url:'WGI source'};
+individuals.indicators.governmentEffectiveness={code:'GOV_WGI_GE_SC',unit:'score (0-100)'};
+individuals.countries[0].series.governmentEffectivenessEstimate={2024:{v:-0.42,record:91,countryCode:'GB',sourceISO3:'',countryMatch:'iso2_country_catalog'}};
+countries=core.countryObservations(individuals,{...one,metric:'governmentEffectivenessEstimate',ids:['A'],year:2024});
+assert.equal(countries.rows[0].value,-0.42);assert.equal(countries.rows[0].unit,'estimate (approximately -2.5 to +2.5)');
+assert.equal(countries.rows[0].indicator,'GOV_WGI_GE.EST');assert.equal(countries.rows[0].source_country_code,'GB');
+assert.equal(countries.rows[0].country_match,'iso2_country_catalog');assert.notEqual(individuals.indicators.governmentEffectiveness.code,individuals.indicators.governmentEffectivenessEstimate.code);
 console.log('Country selection, exact/latest/common years, zeros, patent components and provenance checks passed.');
 
 // Scale conversion requires the denominator from the observation year, including for year selection.

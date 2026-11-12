@@ -3,9 +3,11 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import hashlib
+import io
 import json
 from pathlib import Path
 import time
+from zipfile import ZipFile
 
 from download_data import download as fetch_source
 
@@ -18,15 +20,26 @@ INDICATORS = {
     'patentsNonresident': ('IP.PAT.NRES', 'Patent applications, nonresidents', 'applications'),
     'publications': ('IP.JRN.ARTC.SC', 'Scientific and technical journal articles', 'articles'),
     'population': ('SP.POP.TOTL', 'Population', 'people'),
+    'internetUsers': ('IT.NET.USER.ZS', 'Internet users', '% of population'),
+    'governmentEffectiveness': ('GOV_WGI_GE_SC', 'Government Effectiveness', 'score (0-100)'),
+    'governmentEffectivenessEstimate': ('GOV_WGI_GE.EST', 'Government effectiveness estimate', 'estimate (approximately -2.5 to +2.5)'),
+    'humanCapitalIndex': ('HD.HCI.OVRL', 'Human Capital Index', 'index (0-1)'),
+    'bachelorAttainment': ('SE.TER.CUAT.BA.ZS', "Bachelor's attainment, population 25+", '% of population ages 25+ (cumulative)'),
 }
 SOURCES = {
+    'countries.json': 'https://api.worldbank.org/v2/country?format=json&per_page=1000',
     'classification_current.xlsx': 'https://ddh-openapi.worldbank.org/resources/DR0095333/download',
     'classification_history.xlsx': 'https://ddh-openapi.worldbank.org/resources/DR0095334/download',
     'classification_definitions.html': 'https://datahelpdesk.worldbank.org/knowledgebase/articles/906519-world-bank-country-and-lending-groups',
 }
+INDICATOR_SOURCE_PARAMS = {'governmentEffectivenessEstimate': '&source=3', 'humanCapitalIndex': ''}
 for key, (code, _, _) in INDICATORS.items():
-    SOURCES[key + '.json'] = f'https://api.worldbank.org/v2/country/all/indicator/{code}?source=2&date=2000:2025&format=json&per_page=20000&footnote=y'
-    SOURCES[key + '_metadata.json'] = f'https://api.worldbank.org/v2/indicator/{code}?source=2&format=json'
+    if key == 'governmentEffectiveness':
+        SOURCES[key + '.zip'] = f'https://api.worldbank.org/v2/en/indicator/{code}?downloadformat=csv'
+        continue
+    source_param = INDICATOR_SOURCE_PARAMS.get(key, '&source=2')
+    SOURCES[key + '.json'] = f'https://api.worldbank.org/v2/country/all/indicator/{code}?date=2000:2025{source_param}&format=json&per_page=20000&footnote=y'
+    SOURCES[key + '_metadata.json'] = f'https://api.worldbank.org/v2/indicator/{code}?{source_param.lstrip("&") + "&" if source_param else ""}format=json'
 
 
 def download(refresh=False):
@@ -46,6 +59,10 @@ def download(refresh=False):
                     obj = json.loads(body)
                     assert isinstance(obj, list) and len(obj) == 2, obj
                     assert int(obj[0]['pages']) == 1 and len(obj[1]) == int(obj[0]['total'])
+                if name.endswith('.zip'):
+                    with ZipFile(io.BytesIO(body)) as archive:
+                        assert archive.testzip() is None
+                        assert any(n.startswith('API_GOV_WGI_GE_SC_') and n.endswith('.csv') for n in archive.namelist())
                 if name.endswith('.xlsx'):
                     assert body.startswith(b'PK'), 'Not an XLSX response'
                 (RAW / name).write_bytes(body)
