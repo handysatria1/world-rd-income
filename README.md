@@ -8,7 +8,7 @@ Explore worldwide R&D intensity, income, funding, performing sectors and researc
 
 **[Employment, productivity and goods-export charts](https://handysatria1.github.io/world-rd-income/sector-economy.html):** five layouts with selectable/reorderable economies and years, same-year GVA per person, sector medians, PNG/SVG/CSV/PDF and Excel downloads. Examples use 2022 employment/productivity and 2024 exports. [Sources and classification](figures/world-rd-income/SECTOR_ECONOMY.md).
 
-- [Current complete research package](https://handysatria1.github.io/world-rd-income/world-rd-income.zip): exact source responses, provenance, data, workbook, figures, code and validation reports.
+- [Current research-package download](https://handysatria1.github.io/world-rd-income/#sources): follow “Download data and code” or the source guide’s research-package link for this build’s exact source responses, provenance, data, workbook, figures, code and validation reports, hosted on GitHub Releases.
 - [Archived validated releases](https://github.com/handysatria1/world-rd-income/releases).
 - [Methodology and coverage](figures/world-rd-income/README.md).
 - [Detailed data sources and provenance](https://handysatria1.github.io/world-rd-income/sources.html), including dataset/indicator/table IDs, ONS cell locators, units, conversions and limitations.

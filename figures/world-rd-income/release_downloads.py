@@ -28,6 +28,24 @@ def gh_json(arguments):
     return json.loads(subprocess.check_output([os.environ.get('GH_BIN', 'gh'), *arguments], text=True, encoding='utf-8'))
 
 
+def local_target(page, href, site, repository):
+    """Recognise both relative links and absolute links to this Pages project."""
+    parsed = urlsplit(href)
+    if not parsed.path:
+        return None
+    if parsed.scheme or parsed.netloc:
+        owner, project = repository.split('/')
+        prefix = '/' if project.lower() == owner.lower() + '.github.io' else '/' + project + '/'
+        if parsed.scheme not in ('http', 'https', '') or parsed.hostname != owner.lower() + '.github.io' or not parsed.path.startswith(prefix):
+            return None
+        path = site / unquote(parsed.path[len(prefix):])
+    else:
+        path = page.parent / unquote(parsed.path)
+    if parsed.path.endswith('/'):
+        path = path / 'index.html'
+    return path.resolve()
+
+
 def prepare(site, assets, repository, release_tag, threshold=5_000_000, reuse=None):
     site, assets = Path(site).resolve(), Path(assets).resolve()
     if assets == site or site in assets.parents or assets in site.parents:
@@ -68,10 +86,8 @@ def prepare(site, assets, repository, release_tag, threshold=5_000_000, reuse=No
         def replace(match):
             nonlocal rewrites
             parsed = urlsplit(match[3])
-            if parsed.scheme or parsed.netloc or not parsed.path:
-                return match[0]
-            target = (page.parent / unquote(parsed.path)).resolve()
-            if target.parent != site or target.name not in files:
+            target = local_target(page, match[3], site, repository)
+            if target is None or target.parent != site or target.name not in files:
                 return match[0]
             rewrites += 1
             suffix = ('?' + parsed.query if parsed.query else '') + ('#' + parsed.fragment if parsed.fragment else '')
@@ -106,10 +122,9 @@ def verify(site, assets, manifest):
     links = 0
     for page in site.rglob('*.html'):
         for match in HREF.finditer(page.read_text('utf-8')):
-            parsed = urlsplit(match[3])
-            if parsed.scheme or parsed.netloc or not parsed.path:
+            target = local_target(page, match[3], site, manifest['repository'])
+            if target is None:
                 continue
-            target = (page.parent / unquote(parsed.path)).resolve()
             assert target.is_relative_to(site) and target.is_file(), (page.name, match[3])
             links += 1
     size = sum(p.stat().st_size for p in site.rglob('*') if p.is_file())

@@ -69,6 +69,15 @@ class ReleaseDownloadTests(unittest.TestCase):
             self.assertEqual(result.count(b'\r\n'), body.count(b'\r\n'))
             self.assertIn(b'<script>const data={value:1};</script>', result)
 
+    def test_absolute_links_to_own_pages_downloads_are_rewritten(self):
+        with tempfile.TemporaryDirectory() as folder:
+            site, assets = self.fixture(Path(folder))
+            (site / 'sources.html').write_text('<a href="https://owner.github.io/project/book.xlsx">Excel</a><a href="https://elsewhere.example/book.xlsx">Unrelated</a>', encoding='utf-8')
+            prepare(site, assets, 'owner/project', 'data-123', threshold=100)
+            text = (site / 'sources.html').read_text('utf-8')
+            self.assertIn('https://github.com/owner/project/releases/download/data-123/book.xlsx', text)
+            self.assertIn('https://elsewhere.example/book.xlsx', text)
+
 
 if __name__ == '__main__':
     unittest.main()
