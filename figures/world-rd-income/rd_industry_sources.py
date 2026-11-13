@@ -25,7 +25,8 @@ SOURCES = {
     'eustat_rd_industry.px': 'https://www.eustat.eus/bankupx/Resources/PX/Databases/DB/' + TABLE,
     'eustat_rd_branches.html': 'https://en.eustat.eus/documentos/opt_1/tema_312/elem_25882/definicion.html',
     'eustat_technology_definition.html': 'https://en.eustat.eus/documentos/elem_27063/definicion.html',
-    'singapore_rie_survey.html': 'https://www.a-star.edu.sg/news/national-survey-of-rie',
+    # The A*STAR page is descriptive, not a data input; retain the survey's
+    # source workbook and PDFs below rather than making page markup a build dependency.
     'singapore_rie_2023.xlsx': 'https://www.a-star.edu.sg/api/media/ea269952-e9da-4d95-a7a6-b19f20746fab.xlsx',
     'singapore_rie_2023.pdf': 'https://www.a-star.edu.sg/api/media/5bf00b35-2e46-42f7-89e2-fb262d2b3b56.pdf',
     'singapore_rie_notes.pdf': 'https://www.a-star.edu.sg/api/media/a616e021-2b13-472d-aed9-a2bc1249cc7b.pdf',
