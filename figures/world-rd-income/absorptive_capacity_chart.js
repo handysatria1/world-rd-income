@@ -14,6 +14,43 @@
     const code=vintage==='current'?country.current_income_code:(country.history?.[vintage]||'UNK');
     return combine&&['UMC','LMC'].includes(code)?'MIC':code;
   }
+  function periodFor(data,mode,year,from,to){
+    const first=data.first_year,last=data.last_year;
+    let start,end;
+    if(mode==='single')start=end=Number(year);
+    else if(mode==='last5'){end=last;start=Math.max(first,last-4);}
+    else{start=Number(from);end=Number(to);}
+    if(!Number.isInteger(start)||!Number.isInteger(end)||start<first||end>last||start>end)
+      throw new Error(`Choose an ordered period within ${first}–${last}.`);
+    return {start,end,years:Array.from({length:end-start+1},(_,i)=>start+i),
+      label:start===end?String(start):`${start}–${end}`};
+  }
+  function calculateAverages(data,income,metric,vintage,combine,start,end){
+    const incomeCountries=new Map((income?.countries||[]).map(country=>[country.iso,country]));
+    const countries=data.countries.map(country=>{
+      const source=incomeCountries.get(country.iso3),observations=[];
+      for(let year=start;year<=end;year++){
+        const value=source?.series?.[metric]?.[String(year)]?.v;
+        if(value!=null&&Number.isFinite(Number(value)))observations.push([year,Number(value)]);
+      }
+      const n=observations.length;
+      return {...country,average:n?observations.reduce((sum,row)=>sum+row[1],0)/n:null,
+        n_years:n,first_year:n?observations[0][0]:null,last_year:n?observations[n-1][0]:null,
+        income_group:labels[classification(country,vintage,combine)]||labels.UNK};
+    });
+    const codes=combine?['HIC','MIC','LIC']:['HIC','UMC','LMC','LIC'];
+    const groups=codes.map(code=>{
+      const members=countries.filter(country=>classification(country,vintage,combine)===code);
+      const observed=members.filter(country=>country.average!=null);
+      return {income_group_code:code,income_group:labels[code],
+        mean_of_country_means:observed.length?observed.reduce((sum,country)=>sum+country.average,0)/observed.length:null,
+        economies_with_data:observed.length,economies_in_group:members.length,
+        coverage_percent:members.length?100*observed.length/members.length:null,
+        included_iso3:observed.map(country=>country.iso3).sort().join(';'),
+        missing_iso3:members.filter(country=>country.average==null).map(country=>country.iso3).sort().join(';')};
+    });
+    return {countries,groups};
+  }
   function drawChart(rows,metric){
     const width=1100,left=300,plotWidth=590,rowHeight=58,top=58,height=top+rows.length*rowHeight+24;
     const observed=rows.map(r=>r.mean_of_country_means).filter(Number.isFinite);
@@ -53,8 +90,19 @@
     const key=$('capacity-metric').value||data.metrics[0].key;
     const metric=data.metrics.find(item=>item.key===key)||data.metrics[0];
     const vintage=$('capacity-vintage').value||'current',combine=$('capacity-combine').checked;
-    const groups=rowsFor(data,metric.key,vintage,combine);
-    $('capacity-heading').textContent=`${metric.label} · ${metric.unit}`;
+    const mode=$('capacity-period').value||'range';
+    $('capacity-year-control').hidden=mode!=='single';
+    $('capacity-from-control').hidden=mode!=='range';
+    $('capacity-to-control').hidden=mode!=='range';
+    $('capacity-error').hidden=true;
+    let period;
+    try{period=periodFor(data,mode,$('capacity-year').value,$('capacity-from').value,$('capacity-to').value);}
+    catch(error){$('capacity-error').textContent=error.message;$('capacity-error').hidden=false;
+      $('capacity-chart').replaceChildren();fillTable('capacity-groups-table',[],[]);fillTable('capacity-country-table',[],[]);
+      $('capacity-status').textContent='';$('capacity-country-note').textContent='';return;}
+    const calculated=calculateAverages(data,state.income,metric.key,vintage,combine,period.start,period.end);
+    const groups=calculated.groups;
+    $('capacity-heading').textContent=`${metric.label} · ${period.label} · ${metric.unit}`;
     $('capacity-chart').replaceChildren(drawChart(groups,metric));
     fillTable('capacity-groups-table',groups,[
       {key:'income_group',label:'World Bank income group'},
@@ -63,13 +111,10 @@
       {key:'economies_in_group',label:'Countries classified'},
       {key:'coverage_percent',label:'Coverage',format:v=>v==null?'—':fmt(v)+'%'},
     ]);
-    const countryRows=data.countries.map(country=>{
-      const average=country.averages[metric.key];
-      return {economy:country.economy,iso3:country.iso3,
-        income_group:labels[classification(country,vintage,combine)]||labels.UNK,
-        average:average.mean,n_years:average.n,
-        years:average.n?`${average.first_year}–${average.last_year}`:'—'};
-    });
+    const countryRows=calculated.countries.map(country=>({
+      economy:country.economy,iso3:country.iso3,income_group:country.income_group,
+      average:country.average,n_years:country.n_years,
+      years:country.n_years?`${country.first_year}–${country.last_year}`:'—'}));
     fillTable('capacity-country-table',countryRows,[
       {key:'economy',label:'Economy'},{key:'iso3',label:'ISO3'},
       {key:'income_group',label:'World Bank income group'},
@@ -78,9 +123,9 @@
     ]);
     const populatedGroups=groups.filter(row=>row.economies_with_data>0).length;
     const shownVintage=vintage==='current'?data.current_vintage:vintage;
-    $('capacity-status').textContent=`Classification: ${shownVintage}${combine?' · middle-income economies combined':''}. Group averages weight each country equally; n is the number of country means available. ${populatedGroups} of ${groups.length} displayed income groups have observations. `+
+    $('capacity-status').textContent=`Period: ${period.label}. Classification: ${shownVintage}${combine?' · middle-income economies combined':''}. Country means use only non-missing annual observations; group averages weight each country mean equally. ${populatedGroups} of ${groups.length} displayed income groups have observations. `+
       'Researchers are FTE per million people; R&D is expenditure as % of GDP; WGI estimate is separate from the 0–100 score; journal articles are annual counts.';
-    $('capacity-country-note').textContent=`${data.countries.length} country-level period means for ${metric.label}. Each mean and its observed-year count/range are shown; the integrated CSV includes all indicators at once. The selected income vintage changes group labels, not country values.`;
+    $('capacity-country-note').textContent=`${data.countries.length} country-level means for ${metric.label} in ${period.label}. Each mean and its observed-year count/range are shown; the integrated country CSV remains the fixed 2000–2025 reference. The selected income vintage changes group labels, not country values.`;
   }
   function initialize(data){
     for(const metric of data.metrics)$('capacity-metric').add(new Option(`${metric.label} (${metric.unit})`,metric.key));
@@ -88,8 +133,16 @@
     for(const vintage of data.classification_vintages){
       if(vintage!==data.current_vintage)$('capacity-vintage').add(new Option(`${vintage} · fixed membership`,vintage));
     }
+    for(let year=data.first_year;year<=data.last_year;year++){
+      $('capacity-year').add(new Option(year,year));
+      $('capacity-from').add(new Option(year,year));
+      $('capacity-to').add(new Option(year,year));
+    }
+    $('capacity-year').value=data.last_year;
+    $('capacity-from').value=data.first_year;
+    $('capacity-to').value=data.last_year;
     $('capacity-metric').value=data.metrics[0].key;
   }
-  const api={initialize,render,rowsFor};
+  const api={initialize,render,rowsFor,periodFor,calculateAverages};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.AbsorptiveCapacityChart=api;
 })(typeof window!=='undefined'?window:globalThis);

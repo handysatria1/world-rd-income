@@ -12,11 +12,47 @@
   let breakdownEconomies = [...exampleEconomies];
   let view = "snapshot", current = null, exported = [];
   let shared = null;
+  const snapshotIndicators = new Map((data.snapshotIndicators?.rows || []).map(row => [`${row.iso3}|${row.year}`, row]));
   const incomeFor=iso=>shared?IncomeCore.classify(shared.income,iso,shared.vintage,shared.combine):null;
   const fmt = (v, digits = 2) => v == null || !Number.isFinite(v) ? "—" : v.toLocaleString("en-US", {maximumFractionDigits: digits, minimumFractionDigits: digits});
   const short = v => v >= 1e12 ? `${+(v / 1e12).toFixed(1)}tn` : v >= 1e9 ? `${+(v / 1e9).toFixed(1)}bn` : v >= 1e6 ? `${+(v / 1e6).toFixed(1)}m` : v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : `${+v.toFixed(2)}`;
   const unit = () => $("metric").value === "nominal" ? "current US dollars" : "current international dollars (PPP)";
   const rdWindow = (start, end) => start === end ? `${start}` : `${start}–${end}`;
+  function snapshotIndicatorFor(iso,year){return snapshotIndicators.get(`${iso}|${year}`)||null;}
+  function snapshotIndicatorLines(iso,year){
+    const row=snapshotIndicatorFor(iso,year);
+    if(!data.snapshotIndicators)return '';
+    const pct=value=>value==null?'—':`${fmt(value)}%`;
+    const berd=(data.snapshotIndicators.berd_groups||[]).map(group=>{
+      const key=group.id.toLowerCase(),coverage=row?.[`berd_${key}_coverage`];
+      return `${group.label}: ${pct(row?.[`berd_${key}_percent`])}${coverage?` (${coverage})`:''}`;
+    }).join('; ');
+    const gvaCoverage=row?.gva_coverage?` · coverage: ${row.gva_coverage}`:'';
+    return `\n\nAdditional indicators · exact year ${year}\n`+
+      `GVA shares (% of six-group GVA; MHT manufacturing / KIS): ${pct(row?.gva_mht_percent)} / ${pct(row?.gva_kis_percent)}${gvaCoverage}\n`+
+      `Human Capital Index: ${fmt(row?.human_capital_index,3)} (index 0–1; exact-year observation only)\n`+
+      `Researchers in R&D: ${fmt(row?.researchers_fte_total,0)} FTE${row?.researchers_method?` · ${row.researchers_method}`:''}\n`+
+      `Researchers per million people: ${fmt(row?.researchers_fte_per_million,2)} FTE per million people${row?.researchers_rate_method ? ` · ${row.researchers_rate_method}` : ''}\n`+
+      `MHT exports: ${pct(row?.mht_exports_percent_manufactured)} of manufactured exports\n`+
+      `Bachelor attainment: ${pct(row?.bachelor_attainment_percent)} of population ages 25+\n`+
+      `BERD structure (% of reported BERD total; group coverage shown): ${berd}\n`+
+      `Join: ${data.snapshotIndicators.join_rule}`;
+  }
+  function snapshotIndicatorFields(iso,year){
+    const row=snapshotIndicatorFor(iso,year)||{};
+    return {snapshot_indicator_year:year,
+      gva_mht_manufacturing_percent:row.gva_mht_percent??null,gva_kis_percent:row.gva_kis_percent??null,
+      gva_coverage:row.gva_coverage||'',human_capital_index:row.human_capital_index??null,
+      researchers_fte_total:row.researchers_fte_total??null,researchers_fte_per_million:row.researchers_fte_per_million??null,
+      researchers_method:row.researchers_method||'',researchers_rate_method:row.researchers_rate_method||'',
+      mht_exports_percent_manufactured:row.mht_exports_percent_manufactured??null,
+      mht_exports_status:row.mht_exports_status||'',
+      bachelor_attainment_percent_ages_25_plus:row.bachelor_attainment_percent??null,
+      ...Object.fromEntries((data.snapshotIndicators?.berd_groups||[]).flatMap(group=>{
+        const key=group.id.toLowerCase();return [[`berd_${key}_percent`,row[`berd_${key}_percent`]??null],
+          [`berd_${key}_coverage`,row[`berd_${key}_coverage`]||'']];
+      }))};
+  }
   function element(tag, attrs = {}, text, parent) {
     const node = document.createElementNS(NS, tag);
     for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
@@ -94,6 +130,7 @@
       `Missing years: ${e.rd.missing.join(", ") || "none"}\nSource: ${e.rd.sourceName}\nFlags: ${e.rd.flags || "none reported"}` +
       (c.note ? `\n${c.note}\nGDP flags: ${c.gdp[$("metric").value][e.gdpYear]?.flags || ""}` : "") +
       (incomeFor(c.iso)?`\nWorld Bank: ${incomeFor(c.iso).label} · ${incomeFor(c.iso).vintage}`:'')+
+      (['snapshot','compare'].includes(view)?snapshotIndicatorLines(c.iso,e.gdpYear):'')+
       (e.reasons.length ? `\nExcluded: ${e.reasons.join("; ")}` : "");
   }
   function tooltip(node, content, onClick) {
@@ -250,14 +287,32 @@
       ...(r.start?{start_gdp_year:r.start.gdpYear,start_gdp:r.start[opts.metric],start_rd:r.start.rd.value,start_rd_window:rdWindow(r.start.rd.start,r.start.rd.end),start_rd_years:r.start.rd.years.join(";"),start_rd_flags:r.start.rd.flags}:{}),
       gdp_year:r.end.gdpYear,gdp_unit:unit(),gdp:r.end[opts.metric],rd:r.end.rd.value,rd_window:rdWindow(r.end.rd.start,r.end.rd.end),rd_years:r.end.rd.years.join(";"),rd_missing:r.end.rd.missing.join(";"),rd_flags:r.end.rd.flags,
       ...(r.start?{gdp_change:r.end[opts.metric]-r.start[opts.metric],gdp_change_percent:(r.end[opts.metric]/r.start[opts.metric]-1)*100,rd_change_pp:r.end.rd.value-r.start.rd.value}:{}),
-      gdp_status:r.country.gdp[opts.metric][r.end.gdpYear]?.flags||"",gdp_footnote:r.country.gdp[opts.metric][r.end.gdpYear]?.note||""}));
+      gdp_status:r.country.gdp[opts.metric][r.end.gdpYear]?.flags||"",gdp_footnote:r.country.gdp[opts.metric][r.end.gdpYear]?.note||"",
+      ...snapshotIndicatorFields(r.country.iso,r.end.gdpYear)}));
     const columns=[{key:"economy",label:"Economy"},{key:"code",label:"Code"},...(shared?[{key:'income_group',label:'World Bank group'},{key:'gdp_year',label:'GDP year'}]:[])];
     if(view==="compare")columns.push({key:"start_gdp",label:`GDP ${opts.from}`,format:v=>fmt(v)},{key:"start_rd",label:"Earlier R&D (%)",format:v=>fmt(v,4)});
     columns.push({key:"gdp",label:`GDP ${view==="compare"?opts.to:opts.gdpYear}`,format:v=>fmt(v)},{key:"rd",label:"R&D mean (%)",format:v=>fmt(v,4)});
     if(view==="compare")columns.push({key:"gdp_change_percent",label:"GDP change (%)",format:v=>fmt(v,1)},{key:"rd_change_pp",label:"R&D change (pp)",format:v=>fmt(v,3)},{key:"start_rd_years",label:"Earlier R&D years"});
-    columns.push({key:"rd_years",label:"Reported R&D years"},{key:"rd_source",label:"R&D source"});table(exported,columns);
+    columns.push({key:"rd_years",label:"Reported R&D years"},{key:"rd_source",label:"R&D source"},
+      {key:"snapshot_indicator_year",label:"Indicator year"},
+      {key:"gva_mht_manufacturing_percent",label:"GVA · MHT manufacturing (%)",format:v=>fmt(v)},
+      {key:"gva_kis_percent",label:"GVA · KIS (%)",format:v=>fmt(v)},
+      {key:"gva_coverage",label:"GVA coverage"},
+      {key:"human_capital_index",label:"Human Capital Index (0–1)",format:v=>fmt(v,3)},
+      {key:"researchers_fte_total",label:"Researchers (FTE total; reported/derived)",format:v=>fmt(v,0)},
+      {key:"researchers_fte_per_million",label:"Researchers (FTE per million)",format:v=>fmt(v)},
+      {key:"mht_exports_percent_manufactured",label:"MHT exports (% manufactured exports)",format:v=>fmt(v)},
+      {key:"mht_exports_status",label:"MHT exports status"},
+      {key:"bachelor_attainment_percent_ages_25_plus",label:"Bachelor attainment (% ages 25+)",format:v=>fmt(v)});
+    for(const group of data.snapshotIndicators?.berd_groups||[]){
+      const key=group.id.toLowerCase();columns.push({key:`berd_${key}_percent`,label:`BERD · ${group.label} (%)`,format:v=>fmt(v)});
+    }
+    columns.push({key:"researchers_method",label:"Researcher total method"},
+      {key:"researchers_rate_method",label:"Researcher rate method"},
+      ...((data.snapshotIndicators?.berd_groups||[]).length?[{key:"berd_mht_coverage",label:"BERD coverage · MHT"},{key:"berd_lmt_coverage",label:"BERD coverage · LMT"},{key:"berd_kis_coverage",label:"BERD coverage · KIS"},{key:"berd_lis_coverage",label:"BERD coverage · LIS"},{key:"berd_utl_coverage",label:"BERD coverage · utilities"},{key:"berd_oth_coverage",label:"BERD coverage · other production"}]:[]));
+    table(exported,columns);
     $("table-title").textContent="Plotted data";
-    $("table-description").textContent=`Income in ${unit()}. Search filters this table and highlights points; it does not change the sample or regression. CSV includes windows, missing years and flags.`;
+    $("table-description").textContent=`Income in ${unit()}. Additional country-indicator columns use each plotted point’s exact GDP year and ISO3; missing exact-year values remain blank, including nonannual HCI. Researcher totals are reported FTE where available or derived from same-year rate × population. BERD shares include group coverage. Search filters this table and highlights points; it does not change the sample or regression. CSV includes windows, missing years and flags.`;
     const excluded=result.audit.filter(r=>!r.end.eligible||(r.start&&!r.start.eligible));
     $("audit-section").hidden=false;$("audit-title").textContent=`Coverage and exclusions · ${excluded.length} of ${data.countries.length} audited economies excluded`;
     const tbody=$("audit-table").tBodies[0];tbody.replaceChildren();

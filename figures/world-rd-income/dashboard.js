@@ -63,7 +63,7 @@ window.Dashboard=(()=>{
     const global=['snapshot','compare','income'].includes(id),hasYear=innovation||['snapshot','sector','research','research-six','gva','detail'].includes(id)||id.startsWith('rd-')||id.startsWith('economy-');
     $('scope-label').hidden=!global;$('shared-year-label').hidden=!hasYear;$('economy-settings').hidden=id==='sources'||capacityView;
     $('classification-control').hidden=!['rd','economy'].includes(section);$('industry-classification').value=id==='research'?'research':'six';
-    $('year-help').textContent=innovation?'Compare selected economies. Latest available uses each economy’s latest observation; latest common year requires data for every selected economy. Choose an exact year for a fixed-year comparison.':id==='absorptive-capacity'?'Country and income-group averages use observed annual data from 2000–2025; choose an indicator and World Bank classification vintage below.':id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
+     $('year-help').textContent=innovation?'Compare selected economies. Latest available uses each economy’s latest observation; latest common year requires data for every selected economy. Choose an exact year for a fixed-year comparison.':id==='absorptive-capacity'?'Choose one year, a custom year range or the most recent five years; country and group averages recalculate from observed annual data.':id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
     history.replaceState(null,'','#'+id);
     try{
       const state=selection();
@@ -96,7 +96,7 @@ window.Dashboard=(()=>{
       $('industry-classification').onchange=()=>navigate($('industry-classification').value==='research'?'research':'research-six');
       for(const id of ['income-vintage','income-filter','combine-middle'])$(id).addEventListener('change',()=>{chips();update();});
       for(const id of ['income-year-a','income-year-b','income-stat','income-sample','patent-mode','innovation-patent-mode','innovation-scale'])$(id).addEventListener('change',update);
-      for(const id of ['capacity-metric','capacity-vintage','capacity-combine'])$(id).addEventListener('change',update);
+       for(const id of ['capacity-metric','capacity-vintage','capacity-combine','capacity-period','capacity-year','capacity-from','capacity-to'])$(id).addEventListener('change',update);
       $('economy-search').oninput=choices;$('example-economies').onclick=()=>{ids=[...defaults];chips();update();};$('clear-economies').onclick=()=>{ids=[];chips();update();};
       $('use-selection').onclick=()=>{$('sample-scope').value='selected';update();};
       document.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(views.find(v=>v[1]===b.dataset.section)[0]));

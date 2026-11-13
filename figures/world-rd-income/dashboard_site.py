@@ -5,6 +5,8 @@ import csv
 from collections import defaultdict
 from pathlib import Path
 
+from snapshot_indicators import build_snapshot_indicators
+
 ROOT=Path(__file__).resolve().parent
 
 
@@ -34,6 +36,14 @@ def build_dashboard(destination):
     for name in ['government_industry_explorer.json','government_industry_observations.csv','government_industry_verification.json']:
         copy(name,ROOT/'data'/name)
     data=json.loads((ROOT/'data/explorer_history.json').read_text('utf-8'))
+    income=json.loads((ROOT/'data/income_explorer.json').read_text('utf-8'))
+    data['snapshotIndicators']=build_snapshot_indicators(
+        income,
+        json.loads((ROOT/'data/broad_sector_explorer.json').read_text('utf-8')),
+        json.loads((ROOT/'data/industry_explorer.json').read_text('utf-8')),
+        json.loads((ROOT/'data/research_six_group_explorer.json').read_text('utf-8')),
+        country_ids=[country['iso'] for country in data['countries']],
+    )
     for key,name in [('sectorField','national-sector.json.gz'),('breakdowns','national-breakdowns.json.gz')]:
         compressed(name,safe(data[key]).encode('utf-8'));data[key]={**data[key],'rows':[]}
     national=(ROOT/'explorer.html').read_text('utf-8').replace('<!-- published-downloads -->','')

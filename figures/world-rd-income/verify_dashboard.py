@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import gzip
+import re
 from itertools import zip_longest
 from pathlib import Path
 from zipfile import ZipFile
@@ -17,6 +18,7 @@ from absorptive_capacity import METRICS
 from rd_industry_mapping import Classification
 from research_groups import SPECS
 from sector_field_rd import FLAGS
+from snapshot_indicators import build_snapshot_indicators
 
 
 def same(a,b):
@@ -192,6 +194,22 @@ def verify(stage,before_distribution=False):
     assert 'AbsorptiveCapacityChart' in dashboard_js
     assert (stage/'absorptive_capacity.json').is_file()
     assert (stage/'absorptive_capacity_chart.js').is_file()
+    national_html=(stage/'view-national.html').read_text('utf-8')
+    embedded=re.search(r'<script type="application/json" id="history-data">(.*?)</script>',national_html,re.S)
+    assert embedded,'National snapshot data block missing'
+    national_payload=json.loads(embedded.group(1))
+    snapshot=national_payload['snapshotIndicators']
+    expected=build_snapshot_indicators(
+        json.loads((data/'income_explorer.json').read_text('utf-8')),
+        json.loads((data/'broad_sector_explorer.json').read_text('utf-8')),
+        json.loads((data/'industry_explorer.json').read_text('utf-8')),
+        json.loads((data/'research_six_group_explorer.json').read_text('utf-8')),
+        country_ids=[country['iso'] for country in json.loads((data/'explorer_history.json').read_text('utf-8'))['countries']],
+    )
+    assert snapshot==expected
+    assert len(snapshot['rows'])==len({(row['iso3'],row['year']) for row in snapshot['rows']})
+    explorer_js=(ROOT/'explorer.js').read_text('utf-8')
+    assert 'snapshotIndicatorLines' in explorer_js and 'snapshotIndicatorFields' in explorer_js
     site_bytes=sum(p.stat().st_size for p in stage.rglob('*') if p.is_file())
     if not before_distribution:
         assert site_bytes<300_000_000,site_bytes
@@ -200,8 +218,10 @@ def verify(stage,before_distribution=False):
             'group_16_U_exclusion':'passed','UK_KIS_coverage_explanation':'passed','income_classifications':'passed',
             'income_indicator_source_matches':matched,'negative_WGI_estimate':'passed',
             'absorptive_capacity_country_means':len(country_means),
-            'absorptive_capacity_group_rows':len(group_csv),
-            'absorptive_capacity_source_recalculation':'passed',
+             'absorptive_capacity_group_rows':len(group_csv),
+             'absorptive_capacity_source_recalculation':'passed',
+             'snapshot_indicator_rows':len(snapshot['rows']),
+             'snapshot_indicator_exact_iso3_year_join':'passed',
             'distribution_stage':'before_release_offload' if before_distribution else 'full_site',
             'final_pages_size_check':'release_downloads.py' if before_distribution else 'passed'}
     (stage/'dashboard_verification.json').write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8')
