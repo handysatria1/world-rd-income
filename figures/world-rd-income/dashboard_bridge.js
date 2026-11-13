@@ -1,6 +1,6 @@
 /* Same-origin view adapter: shared controls, automatic sizing and in-dashboard links. */
 'use strict';
-const dashboardBridge={register(api){window.dashboardAPI=api;}};
+const dashboardBridge={register(api){const adapter=Object.create(api);adapter.set=async state=>{window.dashboardSourceState=state;await api.set(state);window.SourceCaptions?.refresh();};window.dashboardAPI=adapter;}};
 const dashboardLoads=new Map();
 function loadDashboardJSON(url){if(!dashboardLoads.has(url))dashboardLoads.set(url,(async()=>{try{const response=await fetch(url);if(!response.ok)throw new Error('Dataset unavailable: '+url+' ('+response.status+')');return await (url.endsWith('.gz')?new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json():response.json());}catch(error){dashboardLoads.delete(url);throw error;}})());return dashboardLoads.get(url);}
 function positionDashboardTooltip(tip,x,y){

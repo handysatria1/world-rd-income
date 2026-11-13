@@ -61,7 +61,7 @@ window.IncomeChart=(()=>{
     $('income-svg-download').onclick=()=>save(new Blob([serialize()],{type:'image/svg+xml;charset=utf-8'}),'income-group-comparison.svg');
     $('income-csv-download').onclick=()=>csv(result.rows,'income-group-statistics.csv');
     $('income-audit-download').onclick=()=>csv(result.audit,'income-group-country-inputs.csv');
-    $('income-png-download').onclick=async()=>{const url=URL.createObjectURL(new Blob([serialize()],{type:'image/svg+xml'}));try{const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=2480;canvas.height=1800;canvas.getContext('2d').drawImage(image,0,0,2480,1800);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('PNG encoding failed');save(blob,'income-group-comparison.png');$('income-export-status').textContent='PNG ready.';}catch(error){$('income-export-status').textContent=error.message;}finally{URL.revokeObjectURL(url);}};
+    $('income-png-download').onclick=async()=>{const url=URL.createObjectURL(new Blob([serialize()],{type:'image/svg+xml'}));try{const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=image.width*2;canvas.height=image.height*2;canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('PNG encoding failed');save(blob,'income-group-comparison.png');$('income-export-status').textContent='PNG ready.';}catch(error){$('income-export-status').textContent=error.message;}finally{URL.revokeObjectURL(url);}};
   }
   return {initialize,render,get result(){return result;}};
 })();

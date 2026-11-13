@@ -70,7 +70,7 @@ def build_site(destination: Path) -> None:
         "income_core.js", "income_chart.js", "innovation_chart.js", "absorptive_capacity_chart.js",
         "test_absorptive_capacity_chart.js", "INCOME_GROUPS.md",
         "basque_innovation_sources.py", "basque_innovation.py", "verify_basque_innovation.py",
-        "dashboard_site.py", "snapshot_indicators.py", "test_snapshot_indicators.py", "dashboard.html", "dashboard.css", "dashboard.js", "dashboard_bridge.js",
+        "dashboard_site.py", "snapshot_indicators.py", "test_snapshot_indicators.py", "dashboard.html", "dashboard.css", "dashboard.js", "dashboard_bridge.js", "source_captions.js", "test_source_captions.js", "test_source_captions_browser.py", "SOURCE_CAPTIONS.md",
         "research_groups.py", "research-groups.html", "research_group_chart.js", "research_group_core.js", "research_compare_chart.js", "test_research_groups.js", "RESEARCH_GROUPS.md", "verify_dashboard.py", "test_income.js",
         "government_industry_sources.py", "government_industry.py", "verify_government_industry.py", "official_industry_chart.js", "GOVERNMENT_INDUSTRIES.md",
         "explorer.html", "explorer.css", "explorer_core.js", "explorer.js", "test_explorer.js",

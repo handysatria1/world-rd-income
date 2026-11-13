@@ -54,6 +54,7 @@ jobs:
           node test_sector_economy.js
           node test_rd_industry.js
           node test_income.js
+          node test_source_captions.js
           python -m unittest test_snapshot_indicators.py
           python -m unittest test_income_data.py
       - name: Check R&D units, annual joins and sector-field accounting

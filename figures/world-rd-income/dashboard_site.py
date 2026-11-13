@@ -22,7 +22,7 @@ def build_dashboard(destination):
         (destination/name).write_bytes((source or ROOT/name).read_bytes());files.append(name)
     def compressed(name,body):
         (destination/name).write_bytes(gzip.compress(body,mtime=0));files.append(name)
-    for name in ['dashboard.css','dashboard.js','income_core.js','income_chart.js','innovation_chart.js','absorptive_capacity_chart.js','dashboard_bridge.js','research_group_core.js','research_compare_chart.js','research_group_chart.js','official_industry_chart.js','INCOME_GROUPS.md','RESEARCH_GROUPS.md','GOVERNMENT_INDUSTRIES.md']:
+    for name in ['dashboard.css','dashboard.js','income_core.js','income_chart.js','innovation_chart.js','absorptive_capacity_chart.js','source_captions.js','dashboard_bridge.js','research_group_core.js','research_compare_chart.js','research_group_chart.js','official_industry_chart.js','INCOME_GROUPS.md','RESEARCH_GROUPS.md','GOVERNMENT_INDUSTRIES.md']:
         copy(name)
     for name in ['income_explorer.json','income_classifications.csv','innovation_annual.csv','basque_innovation_annual.csv','income_validation.json',
                  'absorptive_capacity.json','absorptive_capacity_country.csv','absorptive_capacity_groups.csv',
@@ -55,7 +55,7 @@ def build_dashboard(destination):
     sector='.settings>h2,.settings>p,.settings>details,.settings>#selection,.settings>.controls:last-child:not(:first-of-type){display:none!important}.settings label:has(#year),.settings label:has(#kind){display:none!important}'
     national_css='main>header,#citation,#data-sources,.tabs,.country-controls #reset,.country-controls #example,#breakdown-controls fieldset,#gdp-year-control,#sector-year-control{display:none!important}.controls{margin-top:10px}.methodology{margin-top:14px}'
     def frame(document,css=''):
-        return document.replace('</head>','<style>'+common+css+'</style><script src="dashboard_bridge.js"></script><script src="income_core.js"></script></head>')
+        return document.replace('</head>','<style>'+common+css+'</style><script src="source_captions.js"></script><script src="dashboard_bridge.js"></script><script src="income_core.js"></script></head>')
     put('view-national.html',frame(national,national_css))
     detail_partitions=defaultdict(list)
     with (ROOT/'data/gva_isic2.csv').open(encoding='utf-8-sig',newline='') as handle:
