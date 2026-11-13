@@ -17,6 +17,9 @@ OECD = 'https://sdmx.oecd.org/public/rest/v1'
 EUSTAT = 'https://www.eustat.eus/bankupx/api/v1/en/DB/'
 TABLE = 'PX_043201_cid_e05_19t.px'
 KEY = '.'.join(['', 'A', '', '', '', '', '', '', 'MA', 'XDC+USD', 'V'])
+# Use the official published asset URLs embedded in A*STAR's survey page.
+# The public api/media endpoint can return non-workbook responses in CI.
+ASTAR_RIE_ASSETS = 'https://assets.app.optical.gov.sg/a-star/production/published/collections/pages/%252Fnews%252Fnational-survey-of-rie/'
 SOURCES = {
     'oecd_berd_structure.xml': f'{OECD}/dataflow/OECD.STI.STP/DSD_RDS_BERD@DF_BERD_INDU/1.0?references=all',
     'oecd_berd_industry.csv': f'{OECD}/data/OECD.STI.STP,DSD_RDS_BERD@DF_BERD_INDU,1.0/{KEY}?startPeriod=2000&endPeriod=2025&format=csvfilewithlabels',
@@ -27,9 +30,9 @@ SOURCES = {
     'eustat_technology_definition.html': 'https://en.eustat.eus/documentos/elem_27063/definicion.html',
     # The A*STAR page is descriptive, not a data input; retain the survey's
     # source workbook and PDFs below rather than making page markup a build dependency.
-    'singapore_rie_2023.xlsx': 'https://www.a-star.edu.sg/api/media/ea269952-e9da-4d95-a7a6-b19f20746fab.xlsx',
-    'singapore_rie_2023.pdf': 'https://www.a-star.edu.sg/api/media/5bf00b35-2e46-42f7-89e2-fb262d2b3b56.pdf',
-    'singapore_rie_notes.pdf': 'https://www.a-star.edu.sg/api/media/a616e021-2b13-472d-aed9-a2bc1249cc7b.pdf',
+    'singapore_rie_2023.xlsx': ASTAR_RIE_ASSETS + 'ea269952-e9da-4d95-a7a6-b19f20746fab.xlsx',
+    'singapore_rie_2023.pdf': ASTAR_RIE_ASSETS + '5bf00b35-2e46-42f7-89e2-fb262d2b3b56.pdf',
+    'singapore_rie_notes.pdf': ASTAR_RIE_ASSETS + 'a616e021-2b13-472d-aed9-a2bc1249cc7b.pdf',
     'wb_exchange_history.json': 'https://api.worldbank.org/v2/country/all/indicator/PA.NUS.FCRF?source=2&date=2000:2025&format=json&per_page=20000&footnote=y',
     'wb_exchange_metadata.json': 'https://api.worldbank.org/v2/indicator/PA.NUS.FCRF?source=2&format=json',
 }
