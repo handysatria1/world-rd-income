@@ -8,11 +8,12 @@ import math
 import gzip
 import re
 from itertools import zip_longest
+from io import TextIOWrapper
 from pathlib import Path
 from zipfile import ZipFile
 from openpyxl import load_workbook
 
-from income_sources import ROOT
+from income_sources import ROOT, INDICATORS
 from industry_data import read_csv, digest
 from absorptive_capacity import METRICS
 from rd_industry_mapping import Classification
@@ -101,43 +102,83 @@ def verify(stage,before_distribution=False):
     assert all(income['indicators'][key]['code']==code for key,code in indicators.items())
     assert any(cell['v']<0 for c in income['countries'] for cell in c['series'].get('governmentEffectivenessEstimate',{}).values() if cell['v'] is not None)
     assert any(cell['v'] is not None for c in income['countries'] for cell in c['series'].get('governmentEffectiveness',{}).values())
-    catalog=json.loads((data/'income_raw/countries.json').read_text('utf-8'))[1]
-    iso2_to_iso3={r['iso2Code']:r['id'] for r in catalog if r.get('iso2Code') and r.get('id') and (r.get('region') or {}).get('id')!='NA'}
     matched=0
-    for key in ['internetUsers','governmentEffectivenessEstimate','humanCapitalIndex','bachelorAttainment']:
-        if key == 'governmentEffectivenessEstimate':
-            book=load_workbook(data/'income_raw'/f'{key}.xlsx',read_only=True,data_only=True)
-            sheet=book['ge']; rows=sheet.iter_rows(values_only=True); header=next(rows)
-            assert header[2]=='Economy (code)' and header[5]=='Year' and header[8].startswith('Governance estimate')
-            for row_number,record in enumerate(rows,2):
-                if len(record)<9 or record[6]!='ge' or not record[2] or record[5] is None:continue
-                iso=str(record[2]).strip();year=int(record[5])
-                if not 2000<=year<=2025:continue
+    book=load_workbook(data/'income_raw'/'governmentEffectivenessEstimate.xlsx',read_only=True,data_only=True)
+    sheet=book['ge']; rows=sheet.iter_rows(values_only=True); header=next(rows)
+    assert header[2]=='Economy (code)' and header[5]=='Year' and header[8].startswith('Governance estimate')
+    for row_number,record in enumerate(rows,2):
+        if len(record)<9 or record[6]!='ge' or not record[2] or record[5] is None:continue
+        iso=str(record[2]).strip();year=int(record[5])
+        if not 2000<=year<=2025:continue
+        country=lookup.get(iso)
+        if country is None or country.get('region'):continue
+        cell=country['series'].get('governmentEffectivenessEstimate',{}).get(str(year))
+        value=None if record[8] is None or (isinstance(record[8],str) and record[8].strip() in {'','..'}) else float(record[8])
+        assert cell is not None,('governmentEffectivenessEstimate',iso,year)
+        assert cell['record']==f'ge!I{row_number}' and cell['v']==value,('governmentEffectivenessEstimate',iso,year,cell,value)
+        assert cell['countryCode']==iso and cell['countryMatch']=='iso3'
+        matched+=1
+    book.close()
+
+    wdi_keys={code:key for key,(code,_,_) in INDICATORS.items()
+              if key not in {'governmentEffectiveness','governmentEffectivenessEstimate','humanCapitalIndex'}}
+    with ZipFile(data/'income_raw'/'wdi_csv.zip') as archive:
+        member=next(name for name in archive.namelist() if name.rsplit('/',1)[-1].upper()=='WDICSV.CSV')
+        with TextIOWrapper(archive.open(member),encoding='utf-8-sig',newline='') as stream:
+            reader=csv.DictReader(stream);fields=reader.fieldnames or []
+            assert {'Country Name','Country Code','Indicator Name','Indicator Code'}<=set(fields)
+            columns={year:fields.index(str(year))+1 for year in range(2000,2026)}
+            seen_wdi=set()
+            for row_number,record in enumerate(reader,2):
+                key=wdi_keys.get(record['Indicator Code'])
+                if key is None:continue
+                iso=(record['Country Code'] or '').strip();country=lookup.get(iso)
+                if country is None or country.get('region'):continue
+                assert (key,iso) not in seen_wdi,(key,iso)
+                seen_wdi.add((key,iso))
+                for year,column in columns.items():
+                    raw=(record.get(str(year)) or '').strip()
+                    value=None if raw in {'','..'} else float(raw)
+                    cell=country['series'].get(key,{}).get(str(year))
+                    assert cell is not None,(key,iso,year)
+                    assert cell['record']==f'{member}:row {row_number}, column {column} ({year})'
+                    assert cell['v']==value,(key,iso,year,cell,value)
+                    assert cell['countryCode']==iso and cell['sourceISO3']==iso and cell['countryMatch']=='iso3'
+                    matched+=1
+    hci_code=INDICATORS['humanCapitalIndex'][0]
+    with ZipFile(data/'income_raw'/'humanCapitalIndex.zip') as archive:
+        member=next(name for name in archive.namelist() if name.rsplit('/',1)[-1].upper()=='HCIDATA.CSV')
+        with TextIOWrapper(archive.open(member),encoding='utf-8-sig',newline='') as stream:
+            reader=csv.DictReader(stream);fields=reader.fieldnames or []
+            assert {'Country Name','Country Code','Indicator Name','Indicator Code'}<=set(fields)
+            years=range(2010,2021)
+            columns={year:fields.index(str(year))+1 for year in years}
+            records=[];observed_years=set();seen_hci=set()
+            for row_number,record in enumerate(reader,2):
+                if record['Indicator Code']!=hci_code:continue
+                iso=(record['Country Code'] or '').strip()
+                assert len(iso)==3 and iso.isalpha(),(row_number,iso)
+                assert iso not in seen_hci,('humanCapitalIndex',iso)
+                seen_hci.add(iso);records.append((row_number,record,iso))
+                for year in years:
+                    if (record.get(str(year)) or '').strip() not in {'','..'}:
+                        observed_years.add(year)
+            assert observed_years=={2010,2017,2018,2020},observed_years
+            for row_number,record,iso in records:
                 country=lookup.get(iso)
                 if country is None or country.get('region'):continue
-                cell=country['series'].get(key,{}).get(str(year))
-                value=None if record[8] is None or (isinstance(record[8],str) and record[8].strip() in {'','..'}) else float(record[8])
-                assert cell is not None,(key,iso,year)
-                assert cell['record']==f'ge!I{row_number}' and cell['v']==value,(key,iso,year,cell,value)
-                assert cell['countryCode']==iso and cell['countryMatch']=='iso3'
-                matched+=1
-            book.close()
-            continue
-        _,records=json.loads((data/'income_raw'/f'{key}.json').read_text('utf-8'))
-        for position,record in enumerate(records,1):
-            year=int(record['date'])
-            if not 2000<=year<=2025:continue
-            source_iso3=record.get('countryiso3code') or ''
-            source_code=(record.get('country') or {}).get('id') or ''
-            iso=source_iso3 or iso2_to_iso3.get(source_code,'')
-            country=lookup.get(iso)
-            if country is None or country.get('region'):continue
-            cell=country['series'].get(key,{}).get(str(year))
-            assert cell is not None,(key,iso,year)
-            assert cell['record']==position and cell['v']==record['value'],(key,iso,year,cell,record)
-            assert cell['countryCode']==source_code
-            assert cell['countryMatch']==('iso3' if source_iso3 else 'iso2_country_catalog')
-            matched+=1
+                series=country['series'].get('humanCapitalIndex',{})
+                assert {int(year) for year in series}==observed_years,(iso,series)
+                for year in observed_years:
+                    raw=(record.get(str(year)) or '').strip()
+                    value=None if raw in {'','..'} else float(raw)
+                    cell=series.get(str(year))
+                    assert cell is not None,('humanCapitalIndex',iso,year)
+                    assert cell['record']==f'{member}:row {row_number}, column {columns[year]} ({year})'
+                    assert cell['v']==value,('humanCapitalIndex',iso,year,cell,value)
+                    assert cell['countryCode']==iso and cell['sourceISO3']==iso and cell['countryMatch']=='iso3'
+                    matched+=1
+    assert set(wdi_keys.values())<=set(income['indicators'])
     assert matched>0
     capacity=json.loads((data/'absorptive_capacity.json').read_text('utf-8'))
     assert capacity['builtUTC']==income['builtUTC'] and capacity['current_vintage']==income['currentVintage']

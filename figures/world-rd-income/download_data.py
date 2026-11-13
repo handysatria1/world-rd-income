@@ -104,13 +104,13 @@ def uis_archive_url(body: bytes) -> str:
     return urls.pop()
 
 
-def download(url: str, query: dict | None = None) -> tuple[bytes, dict]:
+def download(url: str, query: dict | None = None, timeout: int = 180, retries: int = 3) -> tuple[bytes, dict]:
     """Retry temporary upstream failures, retaining the actual response bytes."""
-    for attempt in range(3):
+    for attempt in range(retries):
         try:
             request_body = None if query is None else json.dumps(query, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
             request = Request(url, data=request_body, headers={"User-Agent": "world-rd-income-research/1.0", "Content-Type": "application/json"})
-            with urlopen(request, timeout=180) as response:
+            with urlopen(request, timeout=timeout) as response:
                 body = response.read()
                 info = {
                     "url": url, "resolved_url": response.url,
@@ -125,7 +125,7 @@ def download(url: str, query: dict | None = None) -> tuple[bytes, dict]:
         except (URLError, TimeoutError, ConnectionError) as error:
             if isinstance(error, HTTPError) and error.code != 429 and not 500 <= error.code < 600:
                 raise
-            if attempt == 2:
+            if attempt == retries - 1:
                 raise
             print(f"Temporary download failure; retrying {url}: {error}")
             time.sleep(5 * (attempt + 1))

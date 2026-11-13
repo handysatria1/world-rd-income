@@ -11,8 +11,9 @@ from zipfile import ZipFile
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from absorptive_capacity import build_absorptive_capacity
-from income_sources import ROOT, RAW, INDICATORS
+from income_sources import ROOT, RAW, INDICATORS, HCI_ARCHIVE_NAME
 from basque_innovation import load_basque_innovation
+from wdi_bulk import load_wdi_observations
 
 DATA = ROOT / 'data'
 GROUPS = {'High income': 'HIC', 'Upper middle income': 'UMC', 'Lower middle income': 'LMC', 'Low income': 'LIC'}
@@ -134,10 +135,12 @@ def build():
     for c in national['countries']:
         countries.setdefault(c['iso'], {'iso': c['iso'], 'name': c['name'], 'current': 'UNK', 'history': {}, 'series': {}})
         countries[c['iso']]['region'] = c.get('geographyType') == 'region'
-    country_catalog = json.loads((RAW / 'countries.json').read_text('utf-8'))
-    assert country_catalog[0]['pages'] == 1 and len(country_catalog[1]) == country_catalog[0]['total']
-    iso2_to_iso3 = {row['iso2Code']: row['id'] for row in country_catalog[1]
-                    if row.get('iso2Code') and row.get('id') and (row.get('region') or {}).get('id') != 'NA'}
+    wdi_metrics = {key: code for key, (code, _, _) in INDICATORS.items()
+                   if key not in {'governmentEffectiveness', 'governmentEffectivenessEstimate', 'humanCapitalIndex'}}
+    wdi_observations = load_wdi_observations(RAW / 'wdi_csv.zip', wdi_metrics.values())
+    hci_code = INDICATORS['humanCapitalIndex'][0]
+    hci_observations = load_wdi_observations(RAW / HCI_ARCHIVE_NAME, {hci_code}, 2010, 2020,
+                                             member_name='HCIData.csv', observed_only_years=True)
     metadata, annual = {}, []
     for metric, (code, label, unit) in INDICATORS.items():
         if metric == 'governmentEffectiveness':
@@ -147,10 +150,15 @@ def build():
             source_file = metric + '.xlsx'
             meta, observations = governance_estimate_observations(RAW / source_file)
             definition = json.loads((RAW / (metric + '_metadata.json')).read_text('utf-8'))[1][0]
+        elif metric == 'humanCapitalIndex':
+            source_file = HCI_ARCHIVE_NAME
+            observations = hci_observations[code]
+            meta = {'lastupdated': '2020 HCI database'}
+            definition = json.loads((RAW / (metric + '_metadata.json')).read_text('utf-8'))[1][0]
         else:
-            source_file = metric + '.json'
-            meta, observations = json.loads((RAW / source_file).read_text('utf-8'))
-            assert meta['pages'] == 1 and len(observations) == meta['total']
+            source_file = 'wdi_csv.zip'
+            observations = wdi_observations[code]
+            meta = {'lastupdated': manifest[source_file]['release_date']}
             definition = json.loads((RAW / (metric + '_metadata.json')).read_text('utf-8'))[1][0]
         assert definition['id'] == code
         metadata[metric] = {'code': code, 'label': label, 'unit': unit, 'definition': definition['sourceNote'],
@@ -165,7 +173,9 @@ def build():
                 continue
             source_iso3 = r.get('countryiso3code') or ''
             source_country_code = r.get('_source_country_code') or (r.get('country') or {}).get('id') or ''
-            iso = source_iso3 or iso2_to_iso3.get(source_country_code, '')
+            assert len(source_iso3) == 3 and source_iso3.isalpha(), (metric, source_iso3, year)
+            assert source_country_code == source_iso3 and r.get('_country_match') == 'iso3', (metric, r, year)
+            iso = source_iso3
             if iso not in countries or countries[iso].get('region'):
                 continue
             assert (iso, year) not in seen
@@ -179,7 +189,7 @@ def build():
                     assert 0 <= value <= 100, (metric, iso, year, value)
                 elif metric != 'governmentEffectivenessEstimate':
                     assert value >= 0, (metric, iso, year, value)
-            match_method = r.get('_country_match') or ('iso3' if source_iso3 else 'iso2_country_catalog' if iso else 'unmatched')
+            match_method = 'iso3'
             source_record = r.get('_source_record', record)
             source_file = r.get('_source_file', source_file)
             countries[iso]['series'].setdefault(metric, {})[str(year)] = {
@@ -189,7 +199,7 @@ def build():
                            'value': value, 'unit': unit, 'availability': 'reported' if value is not None else 'missing',
                            'obs_status': r.get('obs_status', ''), 'footnote': r.get('footnote', ''), 'source_file': source_file,
                            'source_record': source_record, 'source_country_code': source_country_code, 'source_iso3': source_iso3,
-                           'country_match': match_method, 'api_lastupdated': meta.get('lastupdated', ''),
+                           'country_match': match_method, 'source_lastupdated': meta.get('lastupdated', ''),
                            'retrieved_utc': metadata[metric]['retrieved']})
     series, regional_meta, context, regional_annual, regional_manifest = load_basque_innovation()
     assert countries['ES-PV']['region']
@@ -213,8 +223,9 @@ def build():
               'absorptive_capacity_countries': len(capacity['country_rows']),
               'absorptive_capacity_group_rows': len(capacity['group_rows']),
               'checks': ['archived_hashes', 'official_current_historical_agreement', 'unique_country_year_indicator',
-                          'finite_values_and_indicator_specific_ranges', 'WDI_aggregates_and_regions_excluded', 'ISO2_country_catalog_fallback', 'source_cell_locators',
-                          'Eustat_hashes_requests_coordinates', 'population_midyear_proxy_flagged', 'EIS_indicators_separate',
+                         'finite_values_and_indicator_specific_ranges', 'WDI_aggregates_and_regions_excluded',
+                         'WDI_bulk_and_HCI_observed_years', 'exact_iso3_joins_and_source_cell_locators',
+                         'Eustat_hashes_requests_coordinates', 'population_midyear_proxy_flagged', 'EIS_indicators_separate',
                           'country_means_observed_years_only', 'income_group_means_equal_country_weight'],
                'regional_rows_including_missing': len(regional_annual),
               'note': 'Historical workbook Parameters sheet still says FY21; classification columns and current notes explicitly extend to ' + vintage + '. Parameters is not used.'}
