@@ -19,7 +19,8 @@ PRODUCTS = ['_T', 'CPA_2_1_C', *['CPA_2_1_C' + str(d) for d in range(10, 33)]]
 SOURCES = {
     'oecd_tim_structure.xml': 'https://sdmx.oecd.org/public/rest/v1/dataflow/OECD.STI.PIE/DSD_TIM_2025@DF_TIM_2025/1.0?references=all',
     'oecd_tim_employment.csv': 'https://sdmx.oecd.org/public/rest/v1/data/OECD.STI.PIE,DSD_TIM_2025@DF_TIM_2025,1.0/EMPN...W..A?startPeriod=2000&endPeriod=2025&format=csvfile',
-    'oecd_tim_readme_page.html': 'https://www.oecd.org/en/data/datasets/trade-in-employment.html',
+    # OECD's human-readable page returns HTTP 403 to automated retrieval. Keep
+    # the machine-readable dataflow and observations as the reproducible inputs.
     'oecd_btige_structure.xml': 'https://sdmx.oecd.org/sti-public/rest/v1/dataflow/OECD.STI.PIE/DSD_BTIGE@DF_BTIGE/1.0?references=all',
     'oecd_btige_exports.csv': 'https://sdmx.oecd.org/sti-public/rest/v1/data/OECD.STI.PIE,DSD_BTIGE@DF_BTIGE,1.0/A..X.TOTAL.' + '+'.join(PRODUCTS) + '.W.USD?startPeriod=2000&endPeriod=2025&format=csvfile',
     'oecd_btige_readme.xlsx': 'https://webfs-sti.oecd.org/files/STI-PIE/BTIGE/OECD-Bilateral-Trade-in-Goods-End-use-ReadMe.xlsx',
@@ -52,9 +53,7 @@ def main(refresh=False, import_cache=None):
             body, info = download(url, query)
         assert info['url'] == url and json.loads(info.get('request_body', 'null')) == query
         assert hashlib.sha256(body).hexdigest() == info['sha256'] and len(body) == info['bytes']
-        if name.endswith('.html'):
-            assert b'Trade in Employment' in body and b'consistent with output and value added' in body
-        elif name.endswith('.px'):
+        if name.endswith('.px'):
             assert b'DATA=' in body and b'MATRIX=' in body
         elif name.endswith('_metadata.json'):
             assert json.loads(body)['variables']
