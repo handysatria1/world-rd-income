@@ -5,6 +5,14 @@
   const $ = id => document.getElementById(id);
   const NS = "http://www.w3.org/2000/svg";
   const TEAL = "#146b88", INK = "#172d3d", MUTED = "#536574", GRID = "#e1e7ec";
+  const incomeStyles = {
+    HIC: {color: "#2878df", label: "High income"},
+    UMC: {color: "#f06432", label: "Upper-middle income"},
+    LMC: {color: "#10b981", label: "Lower-middle income"},
+    LIC: {color: "#f0a000", label: "Low income"},
+    MIC: {color: "#8b5bb5", label: "Middle income"},
+    UNK: {color: "#687787", label: "Unclassified / region"}
+  };
   const names = {KOR: "Korea", RUS: "Russia", HKG: "Hong Kong", MAC: "Macao", TUR: "Türkiye"};
   const priority = new Set("ES-PV NLD DNK CHN KOR GBR USA SGP IND IDN BRA RUS MEX ZAF ISR CHE LUX IRL JPN DEU AUS FRA SWE MAC QAT NOR HKG SAU".split(" "));
   const controls = ["metric", "gdpYear", "fromYear", "toYear", "scale", "rdMode", "rdStart", "rdEnd", "timing", "strict", "labels", "country", "sectorYear", "gerdBasis", "breakdownBasis", "breakdownSector", "shareMode", "breakdownPercentages"];
@@ -214,6 +222,32 @@
       if (!placed) label.remove();
     }
   }
+  function incomeMarker(parent, code, x, y, size, attrs = {}) {
+    if (code === 'HIC') return element('circle', {cx:x, cy:y, r:size, ...attrs}, null, parent);
+    if (code === 'UMC') return element('rect', {x:x-size, y:y-size, width:size*2, height:size*2, ...attrs}, null, parent);
+    const d = code === 'LMC' ? `M${x},${y-size*1.4} L${x+size*1.3},${y+size} L${x-size*1.3},${y+size} Z` :
+      code === 'UNK' ? `M${x-size},${y-size} L${x+size},${y+size} M${x-size},${y+size} L${x+size},${y-size}` :
+      `M${x},${y-size*1.4} L${x+size*1.2},${y} L${x},${y+size*1.4} L${x-size*1.2},${y} Z`;
+    return element('path', {d, ...attrs}, null, parent);
+  }
+  function incomeLegend(rows) {
+    if (!shared) return;
+    const legend = $('legend'); legend.replaceChildren();
+    const counts = Object.fromEntries(Object.keys(incomeStyles).map(code => [code, 0]));
+    for (const row of rows) counts[incomeFor(row.country.iso).code]++;
+    const codes = shared.combine ? ['HIC','MIC','LIC'] : ['HIC','UMC','LMC','LIC'];
+    if (counts.UNK) codes.push('UNK');
+    for (const code of codes) {
+      const {color, label} = incomeStyles[code], item = document.createElement('span');
+      const icon = element('svg', {width:20, height:20, viewBox:'0 0 20 20', 'aria-hidden':'true'}, null, item);
+      icon.style.verticalAlign = 'middle'; icon.style.marginRight = '5px';
+      incomeMarker(icon, code, 10, 10, 4.5, {fill:color, stroke:color, 'stroke-width':1.3});
+      item.append(document.createTextNode(`${label} (n=${counts[code]})`)); legend.appendChild(item);
+    }
+    const note = document.createElement('span');
+    note.textContent = `Income classification: ${shared.vintage === 'current' ? shared.income.currentVintage : shared.vintage}. n = economies plotted in each group. Filled: complete R&D window; hollow: incomplete. ${view === 'compare' ? 'Earlier positions: outlined squares. ' : ''}Dotted curve: R&D = a + b ln(GDP); group/sample filters refit it.`;
+    legend.appendChild(note);
+  }
   function scatter(result, opts) {
     const rows = result.rows;
     if (!rows.length) { $("charts").innerHTML = '<p class="empty">No economies meet this selection. Try another year or allow reported-year averages.</p>'; return; }
@@ -229,17 +263,16 @@
     for (const row of rows) {
       const group = element("g", {class: "economy", "data-iso": row.country.iso, "data-name": row.country.name.toLowerCase()}, null, svg);
       const x = c.x(row.end[opts.metric]), y = c.y(row.end.rd.value), chosen = row.country.iso === $("country").value;
+      const income = incomeFor(row.country.iso), shape = income?.code || 'HIC', color = income ? incomeStyles[shape].color : TEAL, size = chosen ? 6 : 4.5;
       if (row.start) {
         const sx = c.x(row.start[opts.metric]), sy = c.y(row.start.rd.value);
-        line(group, sx, sy, x, y, {stroke: TEAL, opacity: chosen ? .9 : .25, "stroke-width": chosen ? 2 : 1, "marker-end": "url(#movement-arrow)"});
-        const start = element("rect", {x: sx - 4, y: sy - 4, width: 8, height: 8, fill: "white", stroke: TEAL, opacity: .65, class: "point", "data-endpoint": "start"}, null, group);
+        line(group, sx, sy, x, y, {stroke: color, opacity: chosen ? .9 : .25, "stroke-width": chosen ? 2 : 1, "marker-end": "url(#movement-arrow)"});
+        const start = element("rect", {x: sx - 4, y: sy - 4, width: 8, height: 8, fill: "white", stroke: color, opacity: .65, class: "point", "data-endpoint": "start"}, null, group);
         tooltip(start, details(row, "start"), () => inspect(row.country.iso));
         markerBoxes.push({x:sx-6,y:sy-6,width:12,height:12});
       }
-      if (chosen) element("circle", {cx:x,cy:y,r:11,fill:"none",stroke:TEAL,"stroke-width":1,opacity:.4}, null, group);
-       const income=incomeFor(row.country.iso),shape=income?.code||'HIC',size=chosen?6:4.5;
-       const attrs={fill:row.end.rd.complete?TEAL:'white',stroke:TEAL,'stroke-width':1.3,class:'point','data-endpoint':'end','data-income':shape};
-       const point=shape==='HIC'?element('circle',{cx:x,cy:y,r:size,...attrs},null,group):shape==='UMC'?element('rect',{x:x-size,y:y-size,width:size*2,height:size*2,...attrs},null,group):element('path',{d:shape==='LIC'?`M${x},${y-size*1.4} L${x+size*1.3},${y+size} L${x-size*1.3},${y+size} Z`:shape==='UNK'?`M${x-size},${y-size} L${x+size},${y+size} M${x-size},${y+size} L${x+size},${y-size}`:`M${x},${y-size*1.4} L${x+size*1.2},${y} L${x},${y+size*1.4} L${x-size*1.2},${y} Z`,...attrs},null,group);
+      if (chosen) element("circle", {cx:x,cy:y,r:11,fill:"none",stroke:color,"stroke-width":1,opacity:.4}, null, group);
+      const point = incomeMarker(group, shape, x, y, size, {fill:row.end.rd.complete?color:'white',stroke:color,'stroke-width':1.3,class:'point','data-endpoint':'end','data-income':shape});
       tooltip(point, details(row), () => inspect(row.country.iso));
       markerBoxes.push({x:x-6,y:y-6,width:12,height:12});
       entries.push({row, group, x, y});
@@ -563,7 +596,7 @@
         const endPoints=fitRows.map(r=>({x:r.end[opts.metric],y:r.end.rd.value})),endRho=core.spearman(endPoints);
         stat(`Spearman ρ · ${current.latest?'plotted years':view==="compare"?opts.to:opts.gdpYear}`,endRho?fmt(endRho.rho,3):"—");
         $("legend").innerHTML=(view==="compare"?`<span><b class="key">□ → ●</b>${opts.from} → ${opts.to}; faint dashed fit = earlier year</span>`:"")+ '<span><b class="key">●</b>All R&D years reported</span><span><b class="key">○</b>Incomplete R&D window</span><span>Dotted curve: R&D = a + b ln(GDP)</span>';
-        if(shared)$('legend').textContent=(shared.combine?'● High · ◆ Middle · ▲ Low · × Unclassified/region':'● High · ■ Upper-middle · ◆ Lower-middle · ▲ Low · × Unclassified/region')+' income · '+(shared.vintage==='current'?shared.income.currentVintage:shared.vintage)+'. Filled: complete R&D window; hollow: incomplete. '+(view==='compare'?'Earlier positions: outlined squares. ':'')+'Dotted curve: R&D = a + b ln(GDP); group/sample filters refit it.';
+        incomeLegend(current.rows);
         scatter(current,opts);plottedTable(current,opts);
         $("coverage-note").textContent=view==="compare"?`${current.startEligible} economies eligible at the earlier endpoint; ${current.endEligible} at the later endpoint; ${current.rows.length} in the common comparison. Both fits use that same common sample. The CSV records the selected R&D provider and actual reporting years.`:`${current.rows.length} of ${data.countries.length} audited economies have R&D and both income measures for this selection. Missing values are excluded; hollow points and * labels mark incomplete R&D coverage.`;
         if(!endFit)$("coverage-note").textContent+=" Regression unavailable: fewer than three valid points or no variation.";

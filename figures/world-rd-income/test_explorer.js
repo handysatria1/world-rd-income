@@ -2,6 +2,46 @@
 "use strict";
 const assert = require("node:assert/strict");
 const core = require("./explorer_core.js");
+
+// Exercise the actual snapshot marker/legend renderers without a browser dependency.
+{
+  const vm = require('node:vm'), fs = require('node:fs');
+  const source = fs.readFileSync(require('node:path').join(__dirname, 'explorer.js'), 'utf8');
+  const node = tag => ({tag, children:[], style:{}, attrs:{},
+    appendChild(child){this.children.push(child);return child;},
+    append(child){this.children.push(child);},
+    replaceChildren(){this.children=[];},
+    setAttribute(key,value){this.attrs[key]=value;}});
+  const legend = node('div');
+  const context = vm.createContext({
+    document:{createElement:node, createElementNS:(ns,tag)=>node(tag), createTextNode:text=>({textContent:text})},
+    $:()=>legend, NS:'http://www.w3.org/2000/svg', view:'snapshot',
+    shared:{combine:false, vintage:'current', income:{currentVintage:'FY2027'}},
+    incomeFor:iso=>({code:iso})
+  });
+  vm.runInContext(source.slice(source.indexOf('  const incomeStyles'), source.indexOf('  const names')) +
+    source.slice(source.indexOf('  function element('), source.indexOf('  function text(')) +
+    source.slice(source.indexOf('  function incomeMarker('), source.indexOf('  function scatter(')), context);
+  const rows = ['HIC','HIC','UMC','LMC','LIC','UNK'].map(iso=>({country:{iso}}));
+  context.rows=rows;vm.runInContext('incomeLegend(rows)',context);
+  const labels = () => legend.children.slice(0,-1).map(item=>item.children[1].textContent);
+  assert.deepEqual(labels(), ['High income (n=2)','Upper-middle income (n=1)','Lower-middle income (n=1)','Low income (n=1)','Unclassified / region (n=1)']);
+  const markers = legend.children.slice(0,-1).map(item=>item.children[0].children[0]);
+  assert.deepEqual(markers.map(m=>m.tag), ['circle','rect','path','path','path']);
+  assert.deepEqual(markers.map(m=>m.attrs.fill), ['#2878df','#f06432','#10b981','#f0a000','#687787']);
+  assert.equal(markers[2].attrs.d.split(' L').length,3); // lower-middle triangle
+  assert.equal(markers[3].attrs.d.split(' L').length,4); // low-income diamond
+  context.rows=[rows[2]];vm.runInContext('incomeLegend(rows)',context);
+  assert.deepEqual(labels(), ['High income (n=0)','Upper-middle income (n=1)','Lower-middle income (n=0)','Low income (n=0)']);
+  context.shared.combine=true;context.shared.vintage='FY2020';context.rows=[{country:{iso:'MIC'}}];
+  vm.runInContext('incomeLegend(rows)',context);
+  assert.deepEqual(labels(), ['High income (n=0)','Middle income (n=1)','Low income (n=0)']);
+  assert.match(legend.children.at(-1).textContent,/FY2020/);
+  context.rows=[];vm.runInContext('incomeLegend(rows)',context);
+  assert.ok(labels().every(label=>label.endsWith('(n=0)')));
+  console.log('Snapshot income colors, marker shapes and dynamic group counts passed.');
+}
+
 const observations = values => Object.fromEntries(Object.entries(values).map(([year,v])=>[year,{v,flags:"",note:""}]));
 function country(iso, oecd, wdi, missingPPP=false) {
   return {iso,name:iso,rd:{oecd:observations(oecd),wdi:observations(wdi)},gdp:{
