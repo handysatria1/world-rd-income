@@ -14,7 +14,7 @@ Snapshot symbols: high = circle; upper-middle = square; lower-middle = diamond; 
 
 ## Four-panel indicators
 
-All four panels use WDI source 2, with exact annual observations for 2000–2025, and retain source metadata/flags. This WDI-only panel can differ from the national explorer, which also selects OECD/ONS/Eustat sources.
+All four panels use WDI source 2, with exact annual observations for 2000–2025, archived indicator metadata and exact source-cell coordinates. Observations are read from the official, dated World Development Indicators CSV archive discovered through the [World Bank Data Catalog](https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators); the archive and its release date are recorded in `data/income_raw/manifest.json`. This WDI-only panel can differ from the national explorer, which also selects OECD/ONS/Eustat sources.
 
 - `GB.XPD.RSDV.GD.ZS`: R&D expenditure, % GDP; UNESCO UIS.
 - `SP.POP.SCIE.RD.P6`: researchers in R&D, per million people; UNESCO UIS. Consult archived metadata for the source's FTE definition.
@@ -29,7 +29,7 @@ The plotted CSV contains statistics, method, sample, classification vintage and 
 
 ## Country-level indicators
 
-Alongside the existing Internet-users series (`IT.NET.USER.ZS`) and 0–100 government-effectiveness score (`GOV_WGI_GE_SC`), the country explorer includes the separate WGI government-effectiveness estimate (`GOV_WGI_GE.EST`, which may be negative), Human Capital Index (`HD.HCI.OVRL`, non-annual), and cumulative bachelor's attainment among people ages 25+ (`SE.TER.CUAT.BA.ZS`). When a World Bank API record lacks ISO3, the pipeline maps its source country code through the archived World Bank country catalog. Values are joined by economy and exact year; missing years are not filled.
+Alongside the existing Internet-users series (`IT.NET.USER.ZS`) and 0–100 government-effectiveness score (`GOV_WGI_GE_SC`), the country explorer includes the separate WGI government-effectiveness estimate (`GOV_WGI_GE.EST`, which may be negative), Human Capital Index (`HD.HCI.OVRL`, non-annual), and cumulative bachelor's attainment among people ages 25+ (`SE.TER.CUAT.BA.ZS`). The legacy HCI series comes from the World Bank's [official HCI CSV archive](https://databank.worldbank.org/data/download/HCI_CSV.zip) and is retained only for its reported years (2010, 2017, 2018 and 2020). All source country codes must be exact three-letter ISO3 matches; source aggregates and regions are excluded. Values are joined by economy and exact year; missing years are not filled.
 
 The 0–100 governance score remains distinct from the WGI estimate. It is retrieved from the official World Bank CSV ZIP, with source-cell locators retained in the annual data export. Indicator-specific value ranges are checked during the build. The dashboard provides a separate country view for each measure and preserves reported years and missing observations.
 
@@ -43,7 +43,7 @@ The group comparison can use the current or any available historical World Bank 
 
 Under **Innovation**, choose **Researchers by economy**, **Patent applications by economy** or **Journal articles by economy**. These views use the shared selection of up to 16 economies, in the selected order, and the shared income-group filter. Each row is an individual observation, without group aggregation. Each view offers **Total / Per million people**, remembering its selection. Researchers are full-time equivalents (FTE), not headcounts. Patent applicants can be residents, nonresidents, or their derived office total.
 
-WDI researchers are natively a population rate; total FTE is **calculated** as rate × same-year `SP.POP.TOTL` / 1,000,000. Patent/article rates are **calculated** as count / same-year population × 1,000,000. A conversion requires positive finite population from that exact year; no different-year denominator is substituted. These conversions inherit the source precision and vintages, and do not constitute independently reported totals. The WDI population snapshot is archived separately with its own retrieval/update dates.
+WDI researchers are natively a population rate; total FTE is **calculated** as rate × same-year `SP.POP.TOTL` / 1,000,000. Patent/article rates are **calculated** as count / same-year population × 1,000,000. A conversion requires positive finite population from that exact year; no different-year denominator is substituted. These conversions inherit the source precision and vintages, and do not constitute independently reported totals. Population and the other WDI observations share the same archived bulk release; exact source rows, retrieval time and release date are retained.
 
 - **Exact year:** use that year's observation only, retaining missing values.
 - **Latest available:** choose the most recent usable observation separately for each economy, indicator/patent definition and measure, within 2000–2025. Required population inputs must also be available. Actual years appear beside every value.
@@ -66,4 +66,4 @@ The EIS tables are the **2025 edition**, updated 30 October 2025; workbook colum
 
 ## Rebuild
 
-Run `income_sources.py` and `basque_innovation_sources.py` (checksum-reuse archives), then `income_data.py`, `verify_basque_innovation.py` and `node test_income.js`. Use `--refresh` only when deliberately changing the source vintage. `build_site.py` packages these outputs into the unified dashboard. The full dashboard uses lazy-loaded local resources; after extracting the research ZIP, serve its root with `python -m http.server` and open the localhost address. Original self-contained national/sector pages remain in the archive.
+Run `income_sources.py` and `basque_innovation_sources.py` (checksum-reuse archives), then `income_data.py`, `verify_basque_innovation.py` and `node test_income.js`. The income refresh discovers the current dated WDI CSV from the official catalog and retrieves the official HCI CSV archive; `--refresh` replaces the archived source vintage. `build_site.py` packages these outputs into the unified dashboard. The full dashboard uses lazy-loaded local resources; after extracting the research ZIP, serve its root with `python -m http.server` and open the localhost address. Original self-contained national/sector pages remain in the archive.
