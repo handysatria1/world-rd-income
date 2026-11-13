@@ -72,7 +72,7 @@ window.InnovationChart=(()=>{
     table('innovation-table',rows,['economy','year','value','unit','availability','missing_reason','indicator','method','source_country_code','country_match','population','population_used','population_method','population_flags','flags','notes']);
     $('innovation-definitions').replaceChildren();
     for(const key of metric==='patents'?(patents==='total'?['patents','patentsNonresident']:[patents==='nonresident'?'patentsNonresident':'patents']):[metric]){
-      const m=data.indicators[key],p=document.createElement('p');p.textContent=`${m.label} (${m.code}; ${m.unit}). ${m.definition} Source: ${m.organization}. WDI updated: ${m.updated}; retrieved ${m.retrieved}.`;$('innovation-definitions').append(p);
+      const m=data.indicators[key],p=document.createElement('p');p.textContent=`${m.label} (${m.code}; ${m.unit}). ${m.definition} Source: ${m.organization}. Source updated: ${m.updated||'not available'}; retrieved ${m.retrieved}.`;$('innovation-definitions').append(p);
     }
     const metadata=[data.indicators.population,...(rows.some(r=>r.iso==='ES-PV')&&metric==='researchers'?Object.values(data.countries.find(c=>c.iso==='ES-PV').indicatorMetadata):[])];
     for(const m of metadata){const p=document.createElement('p');p.textContent=`${m.label} (${m.code}; ${m.unit}). ${m.definition} Source: ${m.organization}. Updated: ${m.updated||'not available'}; retrieved ${m.retrieved}. `;const a=document.createElement('a');a.href=m.display_url||m.url;a.textContent='Source';p.append(a);$('innovation-definitions').append(p);}

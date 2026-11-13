@@ -56,7 +56,7 @@ window.IncomeChart=(()=>{
   function initialize(input){
     data=input;for(const id of ['income-year-a','income-year-b'])for(let y=2000;y<=2025;y++){const o=new Option(y,y);$(id).add(o);}
     $('income-year-a').value='2000';$('income-year-b').value='2013';
-    for(const m of Object.values(data.indicators)){const p=document.createElement('p');p.textContent=`${m.label} (${m.code}; ${m.unit}). ${m.definition} Source: ${m.organization}. WDI updated: ${m.updated}; retrieved ${m.retrieved}.`;$('income-definitions').append(p);}
+    for(const m of Object.values(data.indicators)){const p=document.createElement('p');p.textContent=`${m.label} (${m.code}; ${m.unit}). ${m.definition} Source: ${m.organization}. Source updated: ${m.updated||'not available'}; retrieved ${m.retrieved}.`;$('income-definitions').append(p);}
     const serialize=()=>new XMLSerializer().serializeToString($('income-svg'));
     $('income-svg-download').onclick=()=>save(new Blob([serialize()],{type:'image/svg+xml;charset=utf-8'}),'income-group-comparison.svg');
     $('income-csv-download').onclick=()=>csv(result.rows,'income-group-statistics.csv');

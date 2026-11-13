@@ -9,6 +9,8 @@ from pathlib import Path
 import time
 from zipfile import ZipFile
 
+from openpyxl import load_workbook
+
 from download_data import download as fetch_source
 
 ROOT = Path(__file__).resolve().parent
@@ -33,12 +35,19 @@ SOURCES = {
     'classification_definitions.html': 'https://datahelpdesk.worldbank.org/knowledgebase/articles/906519-world-bank-country-and-lending-groups',
 }
 INDICATOR_SOURCE_PARAMS = {'governmentEffectivenessEstimate': '&source=3', 'humanCapitalIndex': ''}
+WGI_DATASET_URL = ('https://www.worldbank.org/content/dam/sites/govindicators/doc/'
+                   'wgidataset_with_sourcedata-2026.xlsx')
 for key, (code, _, _) in INDICATORS.items():
     if key == 'governmentEffectiveness':
         SOURCES[key + '.zip'] = f'https://api.worldbank.org/v2/en/indicator/{code}?downloadformat=csv'
         continue
     source_param = INDICATOR_SOURCE_PARAMS.get(key, '&source=2')
-    SOURCES[key + '.json'] = f'https://api.worldbank.org/v2/country/all/indicator/{code}?date=2000:2025{source_param}&format=json&per_page=20000&footnote=y'
+    if key == 'governmentEffectivenessEstimate':
+        # The 2026 WGI estimates workbook is the official dataset behind this
+        # indicator; its World Bank API endpoint repeatedly returned HTTP 502.
+        SOURCES[key + '.xlsx'] = WGI_DATASET_URL
+    else:
+        SOURCES[key + '.json'] = f'https://api.worldbank.org/v2/country/all/indicator/{code}?date=2000:2025{source_param}&format=json&per_page=20000&footnote=y'
     SOURCES[key + '_metadata.json'] = f'https://api.worldbank.org/v2/indicator/{code}?{source_param.lstrip("&") + "&" if source_param else ""}format=json'
 
 
@@ -46,6 +55,7 @@ def download(refresh=False):
     RAW.mkdir(parents=True, exist_ok=True)
     path = RAW / 'manifest.json'
     manifest = json.loads(path.read_text('utf-8')) if path.exists() else {}
+    manifest.pop('governmentEffectivenessEstimate.json', None)
 
     def one(item):
         name, url = item
@@ -64,7 +74,12 @@ def download(refresh=False):
                         assert archive.testzip() is None
                         assert any(n.startswith('API_GOV_WGI_GE_SC_') and n.endswith('.csv') for n in archive.namelist())
                 if name.endswith('.xlsx'):
-                    assert body.startswith(b'PK'), 'Not an XLSX response'
+                    with ZipFile(io.BytesIO(body)) as archive:
+                        assert archive.testzip() is None and 'xl/workbook.xml' in archive.namelist()
+                    if name == 'governmentEffectivenessEstimate.xlsx':
+                        book = load_workbook(io.BytesIO(body), read_only=True, data_only=True)
+                        assert 'ge' in book.sheetnames
+                        book.close()
                 (RAW / name).write_bytes(body)
                 if name.endswith('.json'):
                     info['api_lastupdated'] = obj[0].get('lastupdated', '')

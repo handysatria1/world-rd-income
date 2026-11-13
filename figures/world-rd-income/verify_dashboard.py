@@ -105,6 +105,24 @@ def verify(stage,before_distribution=False):
     iso2_to_iso3={r['iso2Code']:r['id'] for r in catalog if r.get('iso2Code') and r.get('id') and (r.get('region') or {}).get('id')!='NA'}
     matched=0
     for key in ['internetUsers','governmentEffectivenessEstimate','humanCapitalIndex','bachelorAttainment']:
+        if key == 'governmentEffectivenessEstimate':
+            book=load_workbook(data/'income_raw'/f'{key}.xlsx',read_only=True,data_only=True)
+            sheet=book['ge']; rows=sheet.iter_rows(values_only=True); header=next(rows)
+            assert header[2]=='Economy (code)' and header[5]=='Year' and header[8].startswith('Governance estimate')
+            for row_number,record in enumerate(rows,2):
+                if len(record)<9 or record[6]!='ge' or not record[2] or record[5] is None:continue
+                iso=str(record[2]).strip();year=int(record[5])
+                if not 2000<=year<=2025:continue
+                country=lookup.get(iso)
+                if country is None or country.get('region'):continue
+                cell=country['series'].get(key,{}).get(str(year))
+                value=None if record[8] is None or (isinstance(record[8],str) and record[8].strip() in {'','..'}) else float(record[8])
+                assert cell is not None,(key,iso,year)
+                assert cell['record']==f'ge!I{row_number}' and cell['v']==value,(key,iso,year,cell,value)
+                assert cell['countryCode']==iso and cell['countryMatch']=='iso3'
+                matched+=1
+            book.close()
+            continue
         _,records=json.loads((data/'income_raw'/f'{key}.json').read_text('utf-8'))
         for position,record in enumerate(records,1):
             year=int(record['date'])

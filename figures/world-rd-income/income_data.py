@@ -49,6 +49,37 @@ def governance_score_observations(path):
     return {'lastupdated': updated, 'sourceid': '2'}, observations, definition
 
 
+def governance_estimate_observations(path):
+    """Read WGI's official 2026 workbook estimates for the ge dimension."""
+    book = load_workbook(path, read_only=True, data_only=True)
+    assert 'ge' in book.sheetnames
+    sheet = book['ge']
+    rows = sheet.iter_rows(values_only=True)
+    header = next(rows)
+    assert header[2] == 'Economy (code)' and header[5] == 'Year'
+    assert header[6] == 'Governance dimension' and header[8].startswith('Governance estimate')
+    observations, seen = [], set()
+    for row_number, row in enumerate(rows, 2):
+        if len(row) < 9 or row[6] != 'ge' or not row[2] or row[5] is None:
+            continue
+        iso, year = str(row[2]).strip(), int(row[5])
+        if not 2000 <= year <= 2025:
+            continue
+        assert len(iso) == 3 and iso.isalpha(), (row_number, iso)
+        assert (iso, year) not in seen, (iso, year)
+        seen.add((iso, year))
+        raw = row[8]
+        value = None if raw is None or (isinstance(raw, str) and raw.strip() in {'', '..'}) else float(raw)
+        observations.append({'indicator': {'id': INDICATORS['governmentEffectivenessEstimate'][0]}, 'date': str(year),
+                             'countryiso3code': iso, 'country': {'id': iso, 'value': row[1]},
+                             'value': value, '_source_record': f'ge!I{row_number}',
+                             '_source_file': 'governmentEffectivenessEstimate.xlsx',
+                             '_source_country_code': iso, '_country_match': 'iso3'})
+    book.close()
+    assert observations and {2000, 2025} <= {int(row['date']) for row in observations}
+    return {'lastupdated': '2026 WGI edition'}, observations
+
+
 def write_csv(name, rows):
     with (DATA / name).open('w', encoding='utf-8-sig', newline='') as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
@@ -112,6 +143,10 @@ def build():
         if metric == 'governmentEffectiveness':
             source_file = metric + '.zip'
             meta, observations, definition = governance_score_observations(RAW / source_file)
+        elif metric == 'governmentEffectivenessEstimate':
+            source_file = metric + '.xlsx'
+            meta, observations = governance_estimate_observations(RAW / source_file)
+            definition = json.loads((RAW / (metric + '_metadata.json')).read_text('utf-8'))[1][0]
         else:
             source_file = metric + '.json'
             meta, observations = json.loads((RAW / source_file).read_text('utf-8'))
