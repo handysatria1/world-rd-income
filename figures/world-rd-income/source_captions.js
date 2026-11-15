@@ -2,6 +2,9 @@
 (function(root){
   'use strict';
   const NS='http://www.w3.org/2000/svg';
+  // Display labels only: source keys, CSV schemas and observation values are unchanged.
+  const columnLabels={metric:'Indicator',group_label:'Income group',economy:'Economy',year:'Year',value:'Value',unit:'Unit',method:'Calculation method',n:'Economies with observations',eligible:'Eligible economies',classification:'Income classification',included:'Included economies',missing:'Missing or excluded economies',missing_reason:'Reason for missing observation',source_country_code:'Source economy code',country_match:'Economy-code matching',population_used:'Population used in calculation',population_method:'Population calculation method',population_flags:'Population source flags',flags:'Source flags',notes:'Notes'};
+  const columnLabel=key=>columnLabels[key]||key.replaceAll('_',' ');
   const source=(label,url)=>({label,url});
   const providers={
     wdi:source('World Bank WDI','https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators'),
@@ -55,10 +58,10 @@
     }));
   }
   function describe(c){
-    let items=[],note="Author’s calculations. Observation years and coverage are shown in the figure/table; missing values are not filled.";
+    let items=[],note="Author’s calculations. Observation years and coverage are reported with the figure or table. Missing values are not imputed.";
     const kind=c.kind||'snapshot',target=c.target||'',rows=c.rows||[],basque=c.ids?.includes('ES-PV');
     if(c.page==='dashboard'){
-      if(target==='innovation-regional-table')return {items:[source('Eustat European Innovation Scoreboard 2025','https://en.eustat.eus/estadisticas/tema_20/opt_1/tipo_1/temas.html')],note:'Published regional indicators; definitions and observation years differ from the country series above.'};
+      if(target==='innovation-regional-table')return {items:[source('Eustat European Innovation Scoreboard 2025','https://en.eustat.eus/estadisticas/tema_20/opt_1/tipo_1/temas.html')],note:'Published regional indicators. Definitions and observation years differ from the economy-level series above.'};
       const metrics=kind==='income'?['rd','researchers','patents','publications']:[c.metric||kind];
       items=metrics.map(indicator);
       if(kind==='income'&&c.patents==='nonresident')items=metrics.map(key=>indicator(key==='patents'?'patentsNonresident':key));
@@ -68,8 +71,8 @@
       if(c.population)items.push(indicator('population'));
       if(basque&&kind==='researchers')items.push(source('Eustat (researchers and population)','https://en.eustat.eus/elementos/tbl0010998_i.html'));
       items.push(providers.groups);
-      note=(kind==='capacity'?'Author’s calculations: country means of available annual observations, then equally weighted country means within each income group. ':kind==='income'?'Author’s calculations: selected group statistic from observed country values, not official World Bank aggregates. ':'Author’s calculations where totals, rates or component sums are derived. ')+
-        (c.period?'Period: '+c.period+'. ':'')+(c.vintage?'Income classification: '+c.vintage+'. ':'')+'Exact observation years only; missing values are not filled.';
+      note=(kind==='capacity'?'Author’s calculations: country means of available annual observations, followed by unweighted means of those country means within each income group. ':kind==='income'?'Author’s calculations using observed country values; these statistics are not official World Bank aggregates. ':'Author’s calculations where totals, rates or component sums are derived. ')+
+        (c.period?'Period: '+c.period+'. ':'')+(c.vintage?'Income classification: '+c.vintage+'. ':'')+(kind==='capacity'?'Missing values are not imputed.':kind==='income'?'Observations are restricted to the specified years. Missing values are not imputed.':'Exact observation years only; missing values are not filled.');
     }else if(c.page==='national'){
       if(['snapshot','compare','history'].includes(kind)){
         const codes=unique(rows.flatMap(r=>[r.end?.rd?.source,r.start?.rd?.source,r.source]).filter(Boolean).map(code=>source(code,code))).map(s=>s.label);
@@ -100,9 +103,9 @@
     }else if(c.page==='sources'){
       items=[source('Archived provider requests, source files and checksums','source_inventory.csv')];note='Source documentation compiled by Handy Satria; follow the linked provider and methodology references.';
     }else if(target==='research-classification'){
-      items=[source('Industry classification and correspondence compiled by Handy Satria','RESEARCH_GROUPS.md')];note='Analytical grouping of ISIC Rev.4 activities; not a new official statistical classification.';
+      items=[source('Industry classification and correspondence compiled by Handy Satria','RESEARCH_GROUPS.md')];note='Author-defined analytical grouping of ISIC Rev.4 activities; not an official statistical classification.';
     }else if(target==='official-table'){
-      items=c.officialSources||[];note='Published source-native industries. Author’s same-year currency conversions where USD amounts are shown; unresolved mappings are not assigned to comparison groups.';
+      items=c.officialSources||[];note='Published source industry categories. Author’s same-year currency conversions where USD amounts are shown; unresolved mappings are not assigned to comparison groups.';
     }else{
       items=industrySources(sourceTokens(rows));
       // With no observations, name the view’s documented inputs rather than imply a zero.
@@ -113,8 +116,8 @@
     if(!items.length)items=[source('Dataset methods and source-cell references','sources.html')];
     return {items:unique(items),note};
   }
-  function parts(spec){return [{text:'Source: ',bold:true},...spec.items.flatMap((s,i)=>[{text:s.label,url:s.url},{text:i===spec.items.length-1?'. ':'; '}]),{text:spec.note}];}
-  function compact(spec){return {...spec,note:spec.note.startsWith('Author')?'Author’s calculations; see Methods & coverage.':'See Methods & coverage.'};}
+  function parts(spec){return [{text:spec.items.length>1?'Sources: ':'Source: ',bold:true},...spec.items.flatMap((s,i)=>[{text:s.label,url:s.url},{text:i===spec.items.length-1?'. ':'; '}]),{text:spec.note}];}
+  function compact(spec){return {...spec,note:spec.note.startsWith('Author')?'Author’s calculations; see ‘Methods and coverage’.':'See ‘Methods and coverage’.'};}
   function wrapParts(input,width,measure=text=>text.length*7){
     const lines=[[]];let used=0;
     for(const part of input)for(const word of part.text.match(/\S+\s*|\s+/g)||[]){
@@ -128,7 +131,7 @@
   const figures=new WeakMap(),tables=new Map(),methods=new Map();let observer,main;
   function methodNote(target,spec,after=target){
     let details=methods.get(target);
-    if(!details){details=document.createElement('details');details.className='source-methods';const summary=document.createElement('summary');summary.textContent='Methods & coverage';details.append(summary,document.createElement('p'));methods.set(target,details);}
+    if(!details){details=document.createElement('details');details.className='source-methods';const summary=document.createElement('summary');summary.textContent='Methods and coverage';details.append(summary,document.createElement('p'));methods.set(target,details);}
     if(details.lastElementChild.textContent!==spec.note)details.lastElementChild.textContent=spec.note;
     if(!details.isConnected)after.after(details);
   }
@@ -214,7 +217,7 @@
       if(records.some(r=>r.target.closest?.('svg,table,#chart,#charts,#research-chart,.plot-wrap,#breakdown-panels')||[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches('svg,table')||n.querySelector('svg,table')))))refresh();
     });refresh();
   }
-  const api={describe,sourceTokens,industrySources,wrapParts,refresh};
+  const api={describe,sourceTokens,industrySources,wrapParts,columnLabel,refresh};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else{root.SourceCaptions=api;document.addEventListener('DOMContentLoaded',initialize);}
 })(typeof window!=='undefined'?window:globalThis);

@@ -11,7 +11,7 @@
     LMC: {color: "#10b981", label: "Lower-middle income"},
     LIC: {color: "#f0a000", label: "Low income"},
     MIC: {color: "#8b5bb5", label: "Middle income"},
-    UNK: {color: "#687787", label: "Unclassified / region"}
+    UNK: {color: "#687787", label: "Unclassified or regional"}
   };
   const names = {KOR: "Korea", RUS: "Russia", HKG: "Hong Kong", MAC: "Macao", TUR: "Türkiye"};
   const priority = new Set("ES-PV NLD DNK CHN KOR GBR USA SGP IND IDN BRA RUS MEX ZAF ISR CHE LUX IRL JPN DEU AUS FRA SWE MAC QAT NOR HKG SAU".split(" "));
@@ -245,12 +245,12 @@
       item.append(document.createTextNode(`${label} (n=${counts[code]})`)); legend.appendChild(item);
     }
     const note = document.createElement('span');
-    note.textContent = `Income classification: ${shared.vintage === 'current' ? shared.income.currentVintage : shared.vintage}. n = economies plotted in each group. Filled: complete R&D window; hollow: incomplete. ${view === 'compare' ? 'Earlier positions: outlined squares. ' : ''}Dotted curve: R&D = a + b ln(GDP); group/sample filters refit it.`;
+    note.textContent = `Income classification: ${shared.vintage === 'current' ? shared.income.currentVintage : shared.vintage}. n denotes the number of plotted economies in each group. Filled markers indicate complete R&D-period coverage; hollow markers indicate incomplete coverage. ${view === 'compare' ? 'Outlined squares indicate the earlier observations. ' : ''}The dotted curve represents R&D intensity = a + b ln(GDP per capita) and is re-estimated when income-group or sample filters change.`;
     legend.appendChild(note);
   }
   function scatter(result, opts) {
     const rows = result.rows;
-    if (!rows.length) { $("charts").innerHTML = '<p class="empty">No economies meet this selection. Try another year or allow reported-year averages.</p>'; return; }
+    if (!rows.length) { $("charts").innerHTML = '<p class="empty">No economies have the required observations. Select another period or permit averages based on available years.</p>'; return; }
     const svg = element("svg", {class: "chart", viewBox: "0 0 1240 670", role: "img", "aria-label": $("chart-title").textContent}, null, $("charts"));
     const endpoints = rows.flatMap(r => r.start ? [r.start, r.end] : [r.end]);
     const c = axes(svg, endpoints.map(e => e[opts.metric]), endpoints.map(e => e.rd.value), opts.scale === "log");
@@ -283,7 +283,7 @@
   function annualChart(result, key, title) {
     const heading = document.createElement("h3"); heading.className = "history-title"; heading.textContent = title; $("charts").appendChild(heading);
     const values = result.rows.filter(r => r[key] != null);
-    if (!values.length) { const p=document.createElement("p");p.className="empty";p.textContent="No available observations for this series and range.";$("charts").appendChild(p);return; }
+    if (!values.length) { const p=document.createElement("p");p.className="empty";p.textContent="No observations are available for this series within the selected period.";$("charts").appendChild(p);return; }
     const svg = element("svg", {class:"chart",viewBox:"0 0 1240 300",role:"img","aria-label":title}, null, $("charts"));
     const a=result.rows[0].year,b=result.rows.at(-1).year,left=78,right=1205,top=22,bottom=244;
     const step=niceStep(Math.max(...values.map(r=>r[key]))/4),max=Math.max(step,Math.ceil(Math.max(...values.map(r=>r[key]))*1.12/step)*step);
@@ -344,8 +344,8 @@
       {key:"researchers_rate_method",label:"Researcher rate method"},
       ...((data.snapshotIndicators?.berd_groups||[]).length?[{key:"berd_mht_coverage",label:"BERD coverage · MHT"},{key:"berd_lmt_coverage",label:"BERD coverage · LMT"},{key:"berd_kis_coverage",label:"BERD coverage · KIS"},{key:"berd_lis_coverage",label:"BERD coverage · LIS"},{key:"berd_utl_coverage",label:"BERD coverage · utilities"},{key:"berd_oth_coverage",label:"BERD coverage · other production"}]:[]));
     table(exported,columns);
-    $("table-title").textContent="Plotted data";
-    $("table-description").textContent=`Income in ${unit()}. Additional country-indicator columns use each plotted point’s exact GDP year and ISO3; missing exact-year values remain blank, including nonannual HCI. Researcher totals are reported FTE where available or derived from same-year rate × population. BERD shares include group coverage. Search filters this table and highlights points; it does not change the sample or regression. CSV includes windows, missing years and flags.`;
+    $("table-title").textContent="Chart data";
+    $("table-description").textContent=`GDP per capita is expressed in ${unit()}. Additional country-indicator columns use each plotted point’s exact GDP year and ISO3; missing exact-year values remain blank, including nonannual HCI. Researcher totals are reported FTE where available or derived from same-year rate × population. BERD shares include group coverage. Search filters the table and highlights chart observations without changing the analytical sample or regression. The CSV records R&D periods, missing years and source flags.`;
     const excluded=result.audit.filter(r=>!r.end.eligible||(r.start&&!r.start.eligible));
     $("audit-section").hidden=false;$("audit-title").textContent=`Coverage and exclusions · ${excluded.length} of ${data.countries.length} audited economies excluded`;
     const tbody=$("audit-table").tBodies[0];tbody.replaceChildren();
@@ -388,7 +388,7 @@
     const opts=result.opts, percentage=opts.chart.endsWith("share"), overlay=["funding_amount","performer_amount"].includes(opts.chart);
     $("chart-title").textContent=`${spec.title} · ${rdWindow(opts.rdStart,opts.rdEnd)}`;
     const basis=data.breakdowns.bases[opts.basis].label;
-    $("selection-description").textContent=`${basis} · ${percentage?(opts.shareMode==="annual"?"Average annual shares":"Shares of period totals"):"Average annual expenditure, billions"}${result.kind==="research"?" · Performing sector: "+data.breakdowns.sectors[opts.sector]:""}.`;
+    $("selection-description").textContent=`${basis} · ${percentage?(opts.shareMode==="annual"?"Mean annual shares":"Shares of period total expenditure"):"Average annual expenditure, billions"}${result.kind==="research"?" · Performing sector: "+data.breakdowns.sectors[opts.sector]:""}.`;
     stat("Selected economies",result.rows.length,$("stats"));stat("With data",result.rows.filter(r=>r.years.length).length,$("stats"));
     stat("All years available",result.rows.filter(r=>r.years.length===opts.rdEnd-opts.rdStart+1).length,$("stats"));
     $("legend").replaceChildren();$("legend").className="legend breakdown-legend";
@@ -452,11 +452,11 @@
     if(overlay&&result.rows.some(r=>r.intensitySource.startsWith("ONS")))notes.push("UK intensity: one ONS provider across the bar years, with indicative 2018–2021 values from the 2023 publication and 2022–2024 from the 2024 publication; GDP/methodology vintage break at 2022.");
     notes.push(`Expenditure: OECD RDS / Eustat / ONS. Intensity: OECD MSTI / WDI / Eustat / ONS, potentially different vintages. Build: ${data.builtUTC}.`);
     $("coverage-note").textContent=notes.join("\n");$("coverage-note").className="metadata breakdown-note";
-    $("inspector").textContent="Select a bar segment or R&D intensity marker to see its values and sources.";
-    $("percentage-note").textContent=`${percentage&&opts.shareMode==="annual"?"Average annual shares.":"Shares of the reported period total."} ${opts.showPercentages?"Small segments are labelled in the data table.":"Percentage labels are hidden."} Grey shows the difference between the reported total and known categories.`;
+    $("inspector").textContent="Select a bar segment or R&D intensity marker to display the corresponding values and sources.";
+    $("percentage-note").textContent=`${percentage&&opts.shareMode==="annual"?"Shares are means of annual category shares.":"Shares are calculated from reported period totals."} ${opts.showPercentages?"Values for segments without chart labels are available in ‘Chart data’.":"Percentage labels are not displayed."} Grey segments represent the difference between the reported total and observed categories; they are not a reported category.`;
     const rows=window.RDBreakdowns.exportRows(data,result);
     table(rows,[{key:"economy",label:"Economy"},{key:"category",label:result.performers?"Performing sector":result.kind==="funding"?"Funding source":"Research type / capital"},{key:"years_used",label:"Years used"},{key:"mean_annual_amount",label:"Mean annual amount (units)",format:v=>fmt(v,1)},{key:"share_percent",label:"Share (%)",format:v=>fmt(v,3)},{key:"intensity_percent_gdp",label:"Intensity (%)",format:v=>fmt(v,3)}],$("data-table"));
-    $("table-description").textContent="All reported category percentages, including segments too small to label. CSV includes annual input cells, totals, flags, conversions and source URLs. Missing categories remain blank, not zero.";
+    $("table-description").textContent="The table includes all category percentages, including those not labelled in the chart. The CSV contains annual source cells, totals, flags, currency conversions and source URLs. Missing categories remain blank and are not treated as zero.";
     $("export-svg").disabled=!result.rows.length;
     $("export").disabled=!rows.length;
     $("export").addEventListener("click",()=>downloadCSV(rows,`gerd-${spec.id}-${opts.rdStart}-${opts.rdEnd}-${opts.basis}.csv`));
@@ -522,15 +522,15 @@
   function render() {
     layoutControls();$("error").hidden=true;$("tooltip").hidden=true;$("stats").replaceChildren();$("charts").replaceChildren();
     $("breakdown-panels").replaceChildren();
-    $("inspector").textContent="Select a point to see its value, year and source.";
+    $("inspector").textContent="Select an observation to display its value, reference year and source.";
     const opts=options();
     try {
-      if(shared&&['history','sector'].includes(view)&&!$('country').value)throw new Error('Select an economy above to display this view.');
+      if(shared&&['history','sector'].includes(view)&&!$('country').value)throw new Error('Select an economy to display the chart.');
       if(shared&&view==='sector'&&['latest','common'].includes(shared.year)){
         const ds=data.sectorField,ci=ds.columns.indexOf('iso3'),yi=ds.columns.indexOf('year'),ai=ds.columns.indexOf('amount'),bi=ds.columns.indexOf('basis'),available=new Map();
         for(const r of ds.rows)if(r[bi]===$('gerdBasis').value&&r[ai]!=null){if(!available.has(r[ci]))available.set(r[ci],new Set());available.get(r[ci]).add(r[yi]);}
         const ids=shared.year==='common'?shared.ids:[$('country').value],year=core.range(data.firstYear,data.lastYear).reverse().find(y=>ids.length&&ids.every(iso=>available.get(iso)?.has(y)));
-        if(year==null)throw new Error('No '+(shared.year==='common'?'common ':'')+'usable sector/field year for the selected economies and price basis.');
+        if(year==null)throw new Error('No '+(shared.year==='common'?'common ':'')+'year has the required sector-and-field observations for the selected economies and price basis.');
         $('sectorYear').value=year;
       }
       $("legend").className="legend";$("coverage-note").className="metadata";
@@ -541,7 +541,7 @@
       } else if(view==="sector") {
         current=core.sectorField(data,$("country").value,+$("sectorYear").value,$("gerdBasis").value);
         const dataset=data.sectorField, currencies=[...new Set(current.rows.map(r=>r.currency_code).filter(Boolean))], bases=[...new Set(current.rows.map(r=>r.base_year).filter(Boolean))];
-        $("chart-title").textContent=`${current.country.name} · R&D by sector and field · ${current.year}`;
+        $("chart-title").textContent=`${current.country.name} · R&D by performing sector and field · ${current.year}`;
         $("selection-description").textContent=`${dataset.bases[current.basis].label} · matrix in millions · currency: ${currencies.join(", ")||"no source rows"}${bases.length?" · base year: "+bases.join(", "):""}.`;
         if(current.country.geographyType==="region")$("selection-description").textContent+=current.basis==="USD_PPP_V"?" Derived from EUR using Spain's national GDP-PPP proxy.":current.basis==="USD_V"?" Derived from EUR using the same-year official exchange rate.":current.basis==="XDC_V"?" Reported Eustat expenditure in EUR.":" No Basque constant-price series is supplied.";
         stat("Available cells",current.available);stat("Source cells returned",current.sourceCells);stat("Confidential cells",current.rows.filter(r=>r.availability==="confidential_or_restricted").length);
@@ -549,14 +549,14 @@
         $("legend").textContent="C: confidential/restricted · I: included elsewhere · M: explicit missing value · —: not returned · *: source flags (select a cell). Zero means an observed zero.";
         sectorMatrix(current);
         $("coverage-note").textContent=`Source cells and explicitly labelled currency conversions; no reconstructed totals. Totals and combined groups overlap their components: do not add all rows or columns. Breakdowns may not add to source totals; the downloadable reconciliation audit records this. Available years across the dataset: ${dataset.summary.first_available_year}–${dataset.summary.last_available_year}. ${dataset.areaNotes?.[current.country.iso] || ""}`;
-        $("inspector").textContent="Select a matrix cell for its currency, price basis, base year, availability and source flags. The sector identifies the performer of R&D, not its funder.";
+        $("inspector").textContent="Select a matrix cell to display its currency, price basis, base year, availability and source flags. Sector refers to the institution performing the R&D, not the source of funds.";
         exported=current.rows;
         table(exported,[{key:"sector",label:"Performing sector"},{key:"field",label:"Field"},{key:"amount",label:"GERD (units)",format:v=>fmt(v,2)},{key:"currency_code",label:"Currency"},{key:"base_year",label:"Base year"},{key:"availability",label:"Availability"},{key:"flag_descriptions",label:"Source flags"}]);
         $("table-title").textContent="Selected sector/field cells";$("table-description").textContent="CSV amounts are in units and retain all seven source flag fields. Absent combinations are explicitly marked not_returned. No other year or price basis is substituted.";$("audit-section").hidden=true;
       } else if(view==="history") {
         current=core.history(data,$("country").value,opts.from,opts.to);
         $("chart-title").textContent=`${current.country.name} · ${opts.from}–${opts.to}`;
-        $("selection-description").textContent="Annual GDP per capita, R&D intensity and derived nominal R&D totals. Gaps are left visible; no missing years are filled.";
+        $("selection-description").textContent="Annual GDP per capita, R&D intensity and derived nominal R&D expenditure. Gaps indicate missing observations; no values are imputed.";
         stat(`GDP ${opts.from}`,fmt(current.rows[0][opts.metric],0));stat(`GDP ${opts.to}`,fmt(current.rows.at(-1)[opts.metric],0));
         stat("GDP years reported",current.rows.filter(r=>r[opts.metric]!=null).length);stat("R&D years reported",current.rows.filter(r=>r.rd!=null).length);
         stat("Nominal R&D years derived",current.rows.filter(r=>r.rdNominalUSD!=null).length);
@@ -584,7 +584,7 @@
         $("selection-description").textContent=view==="compare"?`Earlier R&D: ${rdWindow(current.earlyStart,current.earlyEnd)} · Later R&D: ${rdWindow(opts.rdStart,opts.rdEnd)} · ${opts.timing==="fixed"?"R&D held fixed; horizontal movement only":"R&D window shifts with GDP year"}.`:`R&D ${rdWindow(opts.rdStart,opts.rdEnd)} · ${opts.strict?"Every requested R&D year required":"Mean of reported R&D years"} · ${unit()}.`;
         if(current.latest){$('chart-title').textContent='R&D expenditure and income · '+(current.common?'latest common year':'latest available');$('selection-description').textContent='R&D expenditure (% of GDP) and GDP per capita use the same year for each economy. '+(current.common?'Common year: '+(current.commonYear??'none')+'.':'Reporting years vary by economy; select a point for details.');}
         stat(view==="compare"?"Economies at both endpoints":"Economies plotted",current.rows.length);
-        stat("Complete R&D coverage",current.rows.filter(r=>r.end.rd.complete&&(!r.start||r.start.rd.complete)).length);
+        stat("Complete R&D-period coverage",current.rows.filter(r=>r.end.rd.complete&&(!r.start||r.start.rd.complete)).length);
         stat("Economies in regression",fitRows.length);
         if(view==="compare") {
           const earlyPoints=fitRows.map(r=>({x:r.start[opts.metric],y:r.start.rd.value}));
@@ -607,7 +607,7 @@
       $("export").disabled=!exported.length;applySearch();
     } catch(error) {
       current=null;exported=[];$("error").textContent=error.message;$("error").hidden=false;
-      $("chart-title").textContent="Adjust the year selection";$("selection-description").textContent="";$("legend").textContent="";$("coverage-note").textContent="";
+      $("chart-title").textContent="No results for the selected period";$("selection-description").textContent="";$("legend").textContent="";$("coverage-note").textContent="";
       $("charts").replaceChildren();$("stats").replaceChildren();table([],[]);$("table-description").textContent="";$("audit-section").hidden=true;$("export").disabled=true;
     }
   }

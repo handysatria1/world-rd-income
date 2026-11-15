@@ -10,17 +10,17 @@
 </head>
 <body><main>
 <p><a href="https://handysatria1.github.io/world-rd-income/#data-sources">← Back to the dashboard</a></p>
-<h1>Definitions and sources</h1>
-<p>Data providers, datasets and calculation methods for the national R&amp;D and income charts. Compiled and visualised by <strong>Handy Satria</strong>. Industry and income-group methods are linked below and under each chart.</p>
+<h1>Data sources and methods</h1>
+<p>Sources and calculation methods for the national R&amp;D and GDP per capita charts. Compiled and visualised by <strong>Handy Satria</strong>. Industry and income-group methods are available through the links below and the relevant chart disclosures.</p>
 <p class="metadata">Data build: <strong>__BUILD_UTC__</strong><br>Source retrieval dates (UTC): __RETRIEVAL_DATES__</p>
 <p><a href="INCOME_GROUPS.md">Income groups</a> · <a href="RESEARCH_GROUPS.md">16 industry groups</a> · <a href="RD_INDUSTRY.md">Business R&amp;D</a> · <a href="BROAD_SECTORS.md">Gross value added</a> · <a href="SECTOR_ECONOMY.md">Employment and trade</a> · <a href="INDUSTRY_DATA.md">Detailed industry data</a></p>
-<p><a href="source_inventory.csv" download>Download the complete source inventory (CSV)</a> · <a href="source_manifest.json" download>Download the exact provenance manifest (JSON)</a> · <a href="https://handysatria1.github.io/world-rd-income/world-rd-income.zip">Download the full research package and original responses</a></p>
-<nav aria-label="Source guide sections"><a href="#source-map">Sources by indicator</a><a href="#oecd">OECD</a><a href="#world-bank">World Bank</a><a href="#unesco">UNESCO UIS</a><a href="#eustat">Eustat</a><a href="#ons">ONS</a><a href="#transformations">Conversions and selection</a><a href="#inventory">Source requests and checksums</a></nav>
+<p><a href="source_inventory.csv" download>Download the complete source inventory (CSV)</a> · <a href="source_manifest.json" download>Download source provenance manifest (JSON)</a> · <a href="https://handysatria1.github.io/world-rd-income/world-rd-income.zip">Download research package and archived source responses</a></p>
+<nav aria-label="Source guide sections"><a href="#source-map">Sources by indicator</a><a href="#oecd">OECD</a><a href="#world-bank">World Bank</a><a href="#unesco">UNESCO UIS</a><a href="#eustat">Eustat</a><a href="#ons">ONS</a><a href="#transformations">Conversions and source selection</a><a href="#inventory">Source requests and checksums</a></nav>
 
 <section id="source-map"><h2>1. Sources by indicator</h2>
 <div class="table-wrap"><table><thead><tr><th>Output or input</th><th>Official source</th><th>How it is used</th></tr></thead><tbody>
 <tr><td>Country R&amp;D intensity</td><td>OECD MSTI; UNESCO UIS disseminated through World Bank WDI</td><td>Reported GERD as a percentage of GDP; one provider per economy/window, selected by coverage.</td></tr>
-<tr><td>Country income and total GDP</td><td>World Bank WDI, source 2</td><td>GDP per person in current US$ and current international dollars (PPP); total current-US$ GDP for derived nominal R&amp;D.</td></tr>
+<tr><td>Country income and total GDP</td><td>World Bank WDI, source 2</td><td>GDP per capita in current US$, current international dollars (PPP) and constant 2021 international dollars (PPP). Total GDP in current US$ is used to derive nominal R&amp;D expenditure.</td></tr>
 <tr><td>Nominal R&amp;D database</td><td>OECD MSTI; OECD/WDI/direct UIS intensity with WDI total GDP</td><td>Reported national-currency GERD and separately labelled, same-year derived US$ alternatives.</td></tr>
 <tr><td>Country sector × field, funding and research-type breakdowns</td><td>OECD RDS GERD dataflows</td><td>Three distinct cubes, with original currency/price basis, units, flags and accounting discrepancies retained.</td></tr>
 <tr><td>Basque Country</td><td>Eustat; Spanish WDI conversion factors; OECD Spain totals for the constant-price funding/research proxy</td><td>Regional R&amp;D, GDP, performers, fields, funding and cost components; derived regional intensity and currency conversions.</td></tr>
@@ -55,7 +55,7 @@
 <tr><td><a href="https://api.worldbank.org/v2/indicator/PA.NUS.PPP?source=2&amp;format=json"><code>PA.NUS.PPP</code></a></td><td>GDP PPP conversion factor, local currency units per international dollar.</td><td>Spain (<code>ESP</code>), 2000–2025; national EUR-per-international-dollar proxy for Basque conversions.</td></tr>
 </tbody></table></div>
 <p>Worldwide observation requests use <code>/country/all/indicator/{ID}?source=2&amp;date=2000:2025&amp;format=json&amp;per_page=20000&amp;footnote=y</code>. Spanish conversion requests use <code>/country/ESP/</code> and <code>per_page=100</code>. Indicator definitions are separately archived as metadata JSON. Pagination and response row counts are checked before use.</p>
-<p>The WDI GDP metadata lists national statistics, OECD national accounts and World Bank estimates; PPP metadata also identifies international PPP programmes and related inputs. Both income axes are in <strong>current prices</strong>. Changes over time include price and exchange/PPP effects, not just real growth. Source year labels, footnotes and status fields are kept. WDI's <code>lastupdated</code> is a dataset-level date, not the revision date of an individual observation.</p>
+<p>The WDI GDP metadata identifies national statistical sources, OECD national accounts and World Bank estimates. PPP metadata also identifies international comparison programmes and related inputs. Three GDP per capita measures are available: current US$, PPP in current international dollars, and PPP in constant 2021 international dollars (<code>NY.GDP.PCAP.PP.KD</code>). Changes in the two current-price measures reflect price and exchange-rate or PPP-conversion effects as well as changes in real output. The constant-2021 PPP series adjusts for price changes over time. It requires an observation for the selected economy and year; no current-price series or Spanish national proxy is substituted for a missing Basque Country observation. Changing the GDP per capita measure does not deflate nominal R&amp;D expenditure. Source year labels, footnotes and status fields are retained. WDI's <code>lastupdated</code> field is a dataset-level update date, not the revision date of an individual observation.</p>
 </section>
 
 <section id="unesco"><h2>4. Direct UNESCO Institute for Statistics archive</h2>
@@ -98,9 +98,9 @@
 <p><a href="https://www.ine.es/dynt3/inebase/index.htm?padre=12876&amp;capsel=12883">INE's 2024 regional R&amp;D results</a>, archived as <code>ine_rd_regions_2024.html</code>, were checked for a Basque research-type tabulation. They do not supply numerical inputs to the dashboard. The recorded gap concerns the public tables accessed; it does not rule out a custom tabulation from a statistical office.</p>
 </section>
 
-<section id="transformations"><h2>7. What is reported, selected or derived?</h2>
+<section id="transformations"><h2>7. Reported observations, source selection and derived measures</h2>
 <ul>
-<li><strong>Reported versus normalised:</strong> reported OECD/ONS millions and Eustat thousands are converted to units without inventing observations. Original value, scale, source file, flags and units remain in the annual databases; charts display expenditure in millions.</li>
+<li><strong>Reported values and unit normalisation:</strong> OECD and ONS amounts reported in millions, and Eustat amounts reported in thousands, are converted to currency units without creating additional observations. Original values, scales, source files, flags and units are retained in the annual databases. Chart units are stated in the relevant titles and axis labels.</li>
 <li><strong>Country nominal US$ R&amp;D:</strong> annual GERD/GDP (%) ÷ 100 × total GDP in current US$, matched to the same economy and year. This is derived, not reported nominal GERD. OECD, WDI and direct UIS alternatives are retained separately and must not be summed.</li>
 <li><strong>Basque intensity:</strong> same-year reported Eustat R&amp;D in EUR ÷ Eustat total GDP in EUR × 100. <strong>Current US$:</strong> EUR ÷ Spanish WDI EUR/US$. <strong>Current PPP:</strong> EUR ÷ Spanish WDI EUR/international-dollar factor. Spain's national GDP PPP is a regional proxy, not a measured Basque or R&amp;D-specific PPP.</li>
 <li><strong>Basque constant-price funding/research PPP:</strong> reported EUR × same-year OECD Spain total GERD at constant PPP ÷ OECD Spain total current-EUR GERD. This implied national proxy is conditional on rounded inputs and is distinct from the sector/field dataset's available price bases.</li>
@@ -111,13 +111,13 @@
 <p>See <a href="https://github.com/handysatria1/world-rd-income/blob/main/figures/world-rd-income/README.md">the full methodology</a>, the downloadable coverage/reconciliation tables and the individual chart CSVs for the exact selected years, source flags, conversions and remaining gaps. Data-provider observations may share an underlying source; multiple dissemination routes are not independent corroboration.</p>
 </section>
 
-<section id="inventory"><h2>8. Exact archived requests and responses</h2>
+<section id="inventory"><h2>8. Archived source requests and responses</h2>
 <p><strong>__SOURCE_COUNT__ archived responses</strong>, including observations, metadata and review documentation. Expand any entry for its exact URL, method, retrieval timestamp, byte count, SHA-256 checksum and available release/update fields. POST entries include the exact request body and request hash. The CSV includes every original manifest field; the JSON download is an exact copy of <code>data/raw/manifest.json</code>.</p>
 <p class="notice">Upstream links may now serve a revised vintage. To reproduce this build, use the original response bytes inside <code>world-rd-income.zip → world-rd-income/figures/world-rd-income/data/raw/</code>. Retrieval time, reference year, publication/release edition and dataset-level update date are different concepts. A checksum identifies the archived file; it is not a statement about statistical accuracy.</p>
 __SOURCE_ENTRIES__
 </section>
 
-<section id="source-citation"><h2>9. Citing the data and this work</h2>
+<section id="source-citation"><h2>9. Data attribution and citation</h2>
 <p>Cite <a href="https://handysatria1.github.io/world-rd-income/#citation">Handy Satria's dashboard/software</a> for the analysis and visualisation. For the underlying observations, also identify the relevant provider, dataset title, indicator/table or dataflow ID, publication edition/release, and access/retrieval date from this guide and inventory. Record the archived project release or commit and scientific build timestamp used. Preserve original source attribution and source-specific terms supplied with the downloaded files.</p>
 </section>
 <footer><p><a href="https://handysatria1.github.io/world-rd-income/">Worldwide R&amp;D and income explorer</a> · <a href="https://github.com/handysatria1/world-rd-income">Source code</a> · <a href="https://github.com/handysatria1/world-rd-income/releases">Archived builds</a></p></footer>

@@ -4,6 +4,25 @@ from pathlib import Path
 import sys
 from playwright.sync_api import sync_playwright
 
+HEADING_REPLACEMENTS = {
+    'metric':'Indicator', 'group label':'Income group', 'economy':'Economy',
+    'year':'Year', 'value':'Value', 'unit':'Unit', 'method':'Calculation method',
+    'n':'Economies with observations', 'eligible':'Eligible economies',
+    'classification':'Income classification', 'included':'Included economies',
+    'missing':'Missing or excluded economies', 'missing reason':'Reason for missing observation',
+    'source country code':'Source economy code', 'country match':'Economy-code matching',
+    'population used':'Population used in calculation', 'population method':'Population calculation method',
+    'population flags':'Population source flags', 'flags':'Source flags', 'notes':'Notes',
+    'Average of country means':'Unweighted mean of country means',
+    'Million local currency':'Local currency (millions)', 'Million US$':'US$ (millions)',
+    'Official source':'Source', 'Assigned R&D · US$ bn':'Assigned business R&D (US$ billion)',
+    'GVA/person · US$ thousand':'GVA per employed person (US$ thousand)',
+    'R&D/worker · US$':'Business R&D per employed person (US$)',
+    'GDP/person · current US$':'GDP per capita (current US$)',
+    '% manufactured exports':'Share of manufactured exports (%)',
+    'Provider USD (unit amounts)':'Source-reported US$ (units)',
+}
+
 
 def active(page):
     return next((f for f in page.frames[1:] if f.frame_element().is_visible()), None)
@@ -32,7 +51,8 @@ def main():
         errors=[]
         page.on('pageerror',lambda error:errors.append(str(error)))
         page.goto(args.url,wait_until='networkidle');ready(page)
-        assert page.locator('nav.tabs button').all_text_contents()==['Overview','Country comparisons','Industry analysis','Data & methods']
+        assert page.locator('h1').text_content()=='R&D and Economic Development'
+        assert page.locator('nav.tabs button').all_text_contents()==['Overview','Economy comparisons','Industry analysis','Data and methods']
         frame=active(page)
         assert not frame.locator('.ui-advanced').first.evaluate('(el)=>el.open')
         assert not frame.locator('#ui-plotted-data').evaluate('(el)=>el.open')
@@ -132,9 +152,16 @@ def main():
                 for current in [reference,page]:
                     current.evaluate("async route=>{document.querySelector('#view').value=route;await Dashboard.update();}",route)
                     target=active(current) or current
-                    outputs.append(target.locator('table').evaluate_all('(tables)=>tables.map(t=>({id:t.id,rows:[...t.rows].map(r=>[...r.cells].map(c=>c.textContent))}))'))
+                    outputs.append(target.locator('table').evaluate_all('(tables)=>tables.map(t=>({id:t.id,headings:[...t.querySelectorAll("thead th")].map(c=>c.textContent),rows:[...t.tBodies].flatMap(b=>[...b.rows].map(r=>[...r.cells].map(c=>c.textContent)))}))'))
+                for table in outputs[0]:
+                    if route!='sources':
+                        table['headings']=[HEADING_REPLACEMENTS.get(value,value) for value in table['headings']]
+                if route=='sources':
+                    # Only the approved source-map documentation cell may change.
+                    for table in outputs[0]:
+                        table['rows']=[[cell.replace('GDP per person in current US$ and current international dollars (PPP); total current-US$ GDP for derived nominal R&D.', 'GDP per capita in current US$, current international dollars (PPP) and constant 2021 international dollars (PPP). Total GDP in current US$ is used to derive nominal R&D expenditure.') for cell in row] for row in table['rows']]
                 assert outputs[0]==outputs[1],('Changed displayed data',route)
-            print('All 31 routes retain identical table headings, values, coverage flags and row ordering versus the prior deployment.')
+            print('All 31 routes retain identical table values, coverage flags and row ordering versus the prior deployment; approved display headings may differ.')
         browser.close()
     print('UI checks passed: all routes, collapsed controls/data, observer settling, exact share restoration, presentation/Escape, clipboard fallback, reset and mobile.')
 

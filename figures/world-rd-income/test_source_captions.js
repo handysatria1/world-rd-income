@@ -1,6 +1,10 @@
 'use strict';
 const assert=require('node:assert/strict');
 const captions=require('./source_captions.js');
+assert.equal(captions.columnLabel('metric'),'Indicator');
+assert.equal(captions.columnLabel('group_label'),'Income group');
+assert.equal(captions.columnLabel('population_flags'),'Population source flags');
+assert.equal(captions.columnLabel('unlisted_technical_field'),'unlisted technical field');
 const labels=spec=>spec.items.map(s=>s.label).join('; ');
 let spec=captions.describe({page:'national',kind:'snapshot',ids:['USA','IDN','ES-PV'],rows:[{end:{rd:{source:'oecd'}}},{end:{rd:{source:'wdi'}}},{end:{rd:{source:'eustat'}}}],period:'GDP years: 2025; R&D periods: 2020–2024.'});
 assert.match(labels(spec),/OECD MSTI/);assert.match(labels(spec),/World Bank WDI \/ UNESCO UIS/);assert.match(labels(spec),/Eustat/);assert.match(labels(spec),/income classifications/);
@@ -15,7 +19,7 @@ spec=captions.describe({page:'dashboard',kind:'patents',patents:'nonresident'});
 assert.doesNotMatch(labels(spec),/IP.PAT.RESD/);assert.match(labels(spec),/IP.PAT.NRES/);
 for(const metric of ['rd','researchers','internetUsers','bachelorAttainment','humanCapitalIndex','governmentEffectiveness','governmentEffectivenessEstimate','publications']){
   spec=captions.describe({page:'dashboard',kind:'capacity',metric,period:'2015–2024'});
-  assert.match(spec.note,/equally weighted country means/);assert.match(spec.note,/2015–2024/);
+  assert.match(spec.note,/unweighted means of those country means/);assert.match(spec.note,/2015–2024/);
   assert.ok(spec.items.every(s=>s.label&&s.url));
 }
 spec=captions.describe({page:'detail',target:'export-rows'});assert.match(labels(spec),/UNIDO CIP/);assert.doesNotMatch(labels(spec),/OECD/);

@@ -19,12 +19,12 @@ function usable(rows){if(!rows?.length)return false;const layout=$('research-lay
  return rows.some(r=>(layout!=='single'||r.group_id===$('research-group').value)&&r[metric]!=null);
 }
 function render(){
-  $('research-detail').textContent='Select a bar to see its coverage and sources.';
+   $('research-detail').textContent='Select a bar to display its coverage and sources.';
  const layout=$('research-layout').value,paired=ResearchGroups.pairedLayouts.includes(layout),history=layout==='history',mode=$('research-measure').value,groups=paired?ResearchGroups.groups(data.groups,sector):data.groups;
  $('research-measure-label').hidden=!paired;$('research-sectors').hidden=!paired;$('research-history').hidden=!history;$('research-metric-label').hidden=paired||layout==='comparison';$('research-group-label').hidden=layout!=='single';$('research-changes-csv').hidden=!history;
  $('research-chart').classList.toggle('paired',paired);changes=[];
  const economy=$('research-economy'),previous=economy.value;economy.replaceChildren(...state.ids.map(iso=>new Option(state.names[iso]||iso,iso)));economy.value=state.ids.includes(previous)?previous:state.ids.includes('USA')?'USA':state.ids[0]||'';
-   $('research-layout-help').textContent=history?'Years are shown in chronological order. Changes compare the first and last selected years; the year filter above does not apply.':paired?'Latest available selects GVA and R&D years independently. Common year requires both metrics. Unresolved native industries are available below.':'Choose an indicator to compare industries. Ratios use the same year and require whole-group coverage.';
+   $('research-layout-help').textContent=history?'Reference years are displayed chronologically. Changes are calculated between the earliest and latest selected years. The shared year filter does not apply to this layout.':paired?'‘Latest available’ selects GVA and business R&D years independently. ‘Latest common year’ requires both measures. Published industry categories with unresolved mappings are listed below.':'Select an indicator for the industry comparison. Ratios require complete industry-group coverage and inputs from the same year.';
  if(history){const years=[...new Set(['a','b','c'].map(k=>+$('research-year-'+k).value))].sort((a,b)=>a-b);selected=economy.value?years.map(year=>({iso:economy.value,year,rows:byKey.get(economy.value+'/'+year)||[]})):[];}
   else selected=paired?ResearchGroups.pairedSelect(byKey,state.ids,state.year,groups,mode):ResearchGroups.select(byKey,state.ids,state.year,usable);
  selected=selected.map(a=>({...a,rows:a.rows.filter(r=>groups.some(g=>g.id===r.group_id))}));
@@ -44,8 +44,8 @@ function render(){
     if(!known.length){txt(svg,x+bw/2,top+h/2,'—',{'text-anchor':'middle'});}else{
       let sum=0;for(const r of known){const v=r[key],bh=v/100*h;bottom-=bh;sum+=v;drawBar(svg,x,bottom,bw,bh,data.groups.find(g=>g.id===r.group_id).color,r,key,r[prefix+'_coverage']!=='complete');}
       if(sum<=100.00001&&100-sum>.001){const bh=(100-sum)/100*h;bottom-=bh;const rect=n('rect',{x,y:bottom,width:bw,height:bh,fill:'#d1d8dc'});rect.append(n('title',{},'Unallocated / reconciliation: '+fmt(100-sum)+'% of denominator.'));svg.append(rect);}
-    }txt(svg,x+bw/2,top+h+19,['GVA','R&D','Jobs'][j],{'text-anchor':'middle','font-size':10});
-   });wrap(svg,center,top+h+44,state.names[a.iso]||a.iso,Math.max(8,Math.floor(slot/7)));txt(svg,center,top+h+101,a.year??'No usable year',{'text-anchor':'middle','font-size':11});
+    }txt(svg,x+bw/2,top+h+19,['GVA','R&D','Employment'][j],{'text-anchor':'middle','font-size':10});
+   });wrap(svg,center,top+h+44,state.names[a.iso]||a.iso,Math.max(8,Math.floor(slot/7)));txt(svg,center,top+h+101,a.year??'No eligible year',{'text-anchor':'middle','font-size':11});
   });
   data.groups.forEach((g,i)=>{svg.append(n('rect',{x:1255,y:110+i*42,width:13,height:13,fill:g.color}));const words=(g.id+' · '+g.label).split(' '),lines=[''];for(const word of words){if((lines.at(-1)+' '+word).length>43)lines.push(word);else lines[lines.length-1]+=(lines.at(-1)?' ':'')+word;}lines.forEach((line,j)=>txt(svg,1277,121+i*42+j*14,line,{'font-size':11}));});
   txt(svg,24,814,'Denominators differ: GVA and employment = A–T totals; BERD = reported industry R&D total, which can include U.',{'font-size':13});
@@ -63,14 +63,14 @@ function render(){
   });
  }
   txt(svg,24,height-65,'Handy Satria · OECD, ONS, Eustat and A*STAR RIE. Currency conversions use exact same-year inputs.',{'font-size':13});
- txt(svg,24,height-43,'Basque R&D: companies + PNPI. Singapore RIE: S&T only. Whole-group ratios require complete coverage; native allocations remain partial.',{'font-size':12});
-  txt(svg,24,height-21,(data.groups.length===6?'Six sectors cover A–T.':'Group 16 = R–T.')+' U and unresolved mixed branches remain outside assigned groups. Original data, flags and class bridge are downloadable.',{'font-size':12});
+  txt(svg,24,height-43,'Basque R&D: companies + PNPI. Singapore RIE: S&T only. Ratios require complete industry-group coverage; allocations from source categories remain partial.',{'font-size':12});
+   txt(svg,24,height-21,(data.groups.length===6?'Six sectors cover A–T.':'Group 16 = R–T.')+' U and unresolved mixed branches remain outside assigned groups. Original data, flags and classification correspondence are downloadable.',{'font-size':12});
  $('research-chart').replaceChildren(svg);finish();
 }
 function finish(){
-  $('research-status').textContent=selected.length?selected.map(a=>(state.names[a.iso]||a.iso)+': '+ResearchGroups.yearLabel(a)+(a.rows.length?'':' · missing')).join(' · '):'Choose an economy in the shared controls.';
+   $('research-status').textContent=selected.length?selected.map(a=>(state.names[a.iso]||a.iso)+': '+ResearchGroups.yearLabel(a)+(a.rows.length?'':' · missing')).join(' · '):'Select an economy using the dashboard filters.';
  $('research-changes-csv').disabled=!changes.length;
- const table=$('research-table'),cols=exported.length?Object.keys(exported[0]):['economy','year','group_id'];table.tHead.replaceChildren();table.tBodies[0].replaceChildren();const h=table.tHead.insertRow();for(const c of cols){const th=document.createElement('th');th.textContent=c.replaceAll('_',' ');h.append(th);}for(const r of exported){const tr=table.tBodies[0].insertRow();for(const c of cols)tr.insertCell().textContent=r[c]??'—';}
+  const table=$('research-table'),cols=exported.length?Object.keys(exported[0]):['economy','year','group_id'];table.tHead.replaceChildren();table.tBodies[0].replaceChildren();const h=table.tHead.insertRow();for(const c of cols){const th=document.createElement('th');th.textContent=window.SourceCaptions?.columnLabel(c)||c.replaceAll('_',' ');h.append(th);}for(const r of exported){const tr=table.tBodies[0].insertRow();for(const c of cols)tr.insertCell().textContent=r[c]??'—';}
 }
 function save(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function serialized(){return new XMLSerializer().serializeToString($('research-chart').querySelector('svg'));}

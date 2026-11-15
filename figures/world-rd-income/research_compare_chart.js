@@ -1,6 +1,6 @@
 'use strict';
 const ResearchCompare=(()=>{
-  const labels={economies:'Value added and business R&D by economy',industries:'Value added and business R&D by industry',history:'Value added and business R&D over time'};
+  const labels={economies:'Gross value added and business R&D by economy',industries:'Gross value added and business R&D by industry',history:'Gross value added and business R&D over time'};
   const number=v=>v===0?'0':Math.abs(v)<.01?v.toExponential(1):Number(v).toLocaleString('en',{maximumFractionDigits:2});
   function render({data,state,selected,groups,layout,mode,sector,host,n,txt,drawBar,inspect}){
     const measures=ResearchGroups.measures(mode),width=Math.max(560,Math.min(1500,host.clientWidth)),columns=width>=1100?2:1,pw=(width-40)/columns;
@@ -18,8 +18,8 @@ const ResearchCompare=(()=>{
     txt(svg,20,30,labels[layout],{'font-size':20,'font-weight':700});
     txt(svg,20,55,(sector==='all'?'All '+data.groups.length+' groups':sector)+' · '+(mode==='share'?'% of each metric’s total':'Current US$ billion'),{'font-size':14});
     measures.forEach((m,i)=>{svg.append(n('rect',{x:20+i*115,y:72,width:16,height:12,fill:m.color}));txt(svg,42+i*115,83,m.label,{'font-size':12});});
-    lines(20,108,'Ranked by GVA. Scales vary by panel. Hatching = partial coverage; — = missing; 0 = reported zero.',width-40,12,'#526777');
-    if(!panels.length)txt(svg,20,180,'Choose at least one economy in the shared controls.');
+    lines(20,108,'Observations are ranked by GVA. Axis scales vary across panels. Hatching indicates partial coverage; — denotes missing observations; 0 denotes a reported zero.',width-40,12,'#526777');
+    if(!panels.length)txt(svg,20,180,'Select at least one economy using the dashboard filters.');
     panels.forEach((panel,p)=>{
       const x=20+p%columns*pw,y=145+Math.floor(p/columns)*ph,left=x+labelWidth,w=pw-labelWidth-70;
       lines(x,y,panel.title,pw-25,15);txt(svg,x,y+40,panel.subtitle,{'font-size':12,fill:'#526777'});
@@ -38,14 +38,14 @@ const ResearchCompare=(()=>{
             txt(svg,end+5,by+11,number(value)+(partial?'*':''),{'font-size':11,fill:m.color});
           }else{
             const missing=n('rect',{x:zero,y:by,width:30,height:16,fill:'transparent'});svg.append(missing);
-             inspect(missing,(item.label)+' · '+m.label+'\nNo assignable observation in the selected source year. See official native industries for unresolved classifications.');
+             inspect(missing,(item.label)+' · '+m.label+'\nNo observation can be assigned to this comparison group in the selected source year. Published industry categories with unresolved mappings are listed under ‘Published industry data’.');
             txt(svg,zero+4,by+12,'—',{'font-size':12,fill:m.color,'pointer-events':'none'});
           }
         });
       });
     });
     const changes=[];
-    if(history&&selected.length===1)txt(svg,20,plotBottom+25,'Choose at least two distinct years to calculate endpoint changes.');
+    if(history&&selected.length===1)txt(svg,20,plotBottom+25,'Select at least two distinct years to calculate changes between endpoints.');
     if(history&&selected.length>1){
       const first=selected[0],last=selected.at(-1),start=plotBottom+20,changeUnit=mode==='share'?'percentage points':'% change in current US$';
       txt(svg,20,start,`Change from ${first.year} to ${last.year}`,{'font-size':18,'font-weight':700});
@@ -79,7 +79,7 @@ const ResearchCompare=(()=>{
     for(const text of ['Handy Satria · Official agencies and OECD. Latest GVA and R&D years selected independently; same-year currency inputs.',
       'BERD is assigned business R&D, not total national R&D. Basque: companies + PNPI; Singapore RIE: S&T only.',
       history?'Changes require complete endpoints with matching source and scope. Source flags remain in the inspector and CSV.':'GVA shares: A–T total. BERD shares: reported industry R&D total, including any unallocated activities.',
-       (data.groups.length===6?'Six sectors cover A–T.':'Group 16 = R–T.')+' Partial sums are hatched. Hover, focus or tap a bar for its source expression and flags.'])footer+=lines(20,footer,text,width-40,11,'#526777')+4;
+        (data.groups.length===6?'Six sectors cover A–T.':'Group 16 = R–T.')+' Partial sums are hatched. Hover over, focus on or select a bar to display its source calculation and flags.'])footer+=lines(20,footer,text,width-40,11,'#526777')+4;
     return {svg,changes};
   }
   return {render};

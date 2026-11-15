@@ -1,7 +1,7 @@
 "use strict";
 const data=JSON.parse(document.getElementById("rd-industry-data").textContent),el=id=>document.getElementById(id),ns="http://www.w3.org/2000/svg";
 const countries=new Map(data.countries.map(c=>[c.iso,c]));let selected=data.defaults.slice(),current=[],csvRows=[],nativeCsvRows=[];
-const titles={composition:"Industry R&D by broad sector",comparison:"GVA and business R&D · sector shares",intensity:"Business R&D as a share of sector GVA",perWorker:"Business R&D per employed person",productivity:"Sector R&D intensity and labour productivity",trade:"Manufacturing R&D and goods-export shares"};
+const titles={composition:"Business R&D by broad sector",comparison:"GVA and business R&D · sector shares",intensity:"Business R&D as a share of sector GVA",perWorker:"Business R&D per employed person",productivity:"Business R&D intensity and labour productivity",trade:"Manufacturing R&D and goods-export shares"};
 const fmt=(v,d=1)=>v===null||v===undefined?"Missing":Number(v).toLocaleString("en",{minimumFractionDigits:d,maximumFractionDigits:d});
 const short=s=>s.replaceAll("_"," "),bn=v=>v==null?null:v/1e9;
 function node(tag,attrs={},value){const n=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);if(value!==undefined)n.textContent=value;return n;}
@@ -30,7 +30,7 @@ function render(){
     const left=235,top=115,w=970;
     for(let k=0;k<=4;k++){const x=left+w*k/4;line(svg,x,top-15,x,top+current.length*106-10);text(svg,x,top-26,k*25+'%',{'text-anchor':'middle','font-size':12});}
     current.forEach((a,i)=>{
-      const y=top+i*106,r=a.row;name(svg,83,y+20,countries.get(a.iso).display,150);text(svg,83,y+61,a.year??'No usable year',{'text-anchor':'middle','font-size':11});
+       const y=top+i*106,r=a.row;name(svg,83,y+20,countries.get(a.iso).display,150);text(svg,83,y+61,a.year??'No eligible year',{'text-anchor':'middle','font-size':11});
       for(const [j,key,label]of [[0,'gvaShares','GVA'],[1,'shares','BERD']]){
         const by=y+j*35,good=j===0?r?.gvaShares.every(RDIndustry.finite):r?.stackAvailable;
         text(svg,left-14,by+20,label,{'text-anchor':'end','font-size':12});
@@ -61,7 +61,7 @@ function render(){
     const left=100,top=115,w=width-240,h=420,points=current.filter(a=>a.available),xmax=Math.max(1,...points.map(a=>a.row.intensity[group]))*1.25,ymax=Math.max(1,...points.map(a=>a.row.productivity[group]))*1.25;
     axis(svg,left,top,w,h,ymax);for(let i=0;i<=4;i++){const x=left+w*i/4;line(svg,x,top,x,top+h);text(svg,x,top+h+22,fmt(xmax*i/4),{"text-anchor":"middle"});}
     points.forEach(a=>{const x=left+a.row.intensity[group]/xmax*w,y=top+h-a.row.productivity[group]/ymax*h,c=node("circle",{cx:x,cy:y,r:7,fill:data.groups[group].color});c.append(node("title",{},countries.get(a.iso).name+": "+fmt(a.row.intensity[group],3)+"% R&D/GVA; "+fmt(a.row.productivity[group],3)+" thousand USD/person"));svg.append(c);text(svg,x+12,y-10,countries.get(a.iso).display+" · "+a.year,{"font-size":12});});
-    text(svg,left+w/2,top+h+50,"Business R&D / sector GVA (%)",{"text-anchor":"middle"});text(svg,left,top-18,"GVA per employed person · current US$ thousand",{"font-size":12});text(svg,24,height-125,"Descriptive comparison. R&D intensity and productivity share GVA in their formulas; this plot does not establish a causal relationship.",{"font-size":12});
+    text(svg,left+w/2,top+h+50,"Business R&D / sector GVA (%)",{"text-anchor":"middle"});text(svg,left,top-18,"GVA per employed person · current US$ thousand",{"font-size":12});text(svg,24,height-125,"This comparison is descriptive. R&D intensity and labour productivity both include GVA in their calculation; the chart does not establish a causal relationship.",{"font-size":12});
   }else{
     const compare=kind==="comparison",share=compare||unit==="share",left=65,top=145,h=360,w=width-420,slot=w/Math.max(1,current.length);
     const max=share?100:Math.max(1,...current.filter(a=>a.available).map(a=>a.row.totalUSD/1e9))*1.15;axis(svg,left,top,w,h,max);
@@ -71,14 +71,14 @@ function render(){
         if(good){const values=k===0?[...(share?r.shares:r.assigned.map(bn)),share?r.remainingShare:bn(r.remainingUSD)]:r[k===1?"gvaShares":"employmentShares"];let bottom=top+h;
           values.forEach((v,j)=>{if(v===null)return;const bh=v/max*h;bottom-=bh;const g=data.groups[j],partial=k===0&&j<6&&!r.complete[j];bar(svg,bx,bottom,bw,bh,g?.color??"#cbd2d9",(g?.label??"Unallocated / reconciliation")+": "+fmt(v,3)+(partial?" · partial group":""),partial,k===0&&j<6?[r,j]:null);if(bh>17)text(svg,bx+bw/2,bottom+bh/2+4,fmt(v,digits)+(share?"%":""),{"text-anchor":"middle","font-size":11,fill:j===6?"#172f42":"white"});});
         }else text(svg,bx+bw/2,top+h/2,"—",{"text-anchor":"middle"});
-        if(compare)text(svg,bx+bw/2,top+h+18,["R&D","GVA","Jobs"][k],{"text-anchor":"middle","font-size":10});
+        if(compare)text(svg,bx+bw/2,top+h+18,["R&D","GVA","Employment"][k],{"text-anchor":"middle","font-size":10});
       }
       if(!compare&&r?.totalLocal!=null)text(svg,center,top-15,r.totalUSD==null?r.currency+" "+fmt(r.totalLocal/1e9)+"bn":"US$ "+fmt(r.totalUSD/1e9)+"bn",{"text-anchor":"middle","font-size":12});
       name(svg,center,top+h+43,countries.get(a.iso).display,slot-7);text(svg,center,top+h+83,a.year??"—",{"text-anchor":"middle","font-size":11});if(a.iso==="ES-PV")text(svg,center,top+h+99,"companies + PNPI",{"text-anchor":"middle","font-size":10});
     });legend(svg,left+w+22,top);
   }
   text(svg,24,height-77,"Handy Satria · Sources: OECD RDS BERD / TiVA / TiM / BTiGE; A*STAR RIE; Eustat; World Bank WDI.",{"font-size":12,fill:"#526777"});
-  text(svg,24,height-53,"Basque: companies + PNPI. Singapore RIE: S&T R&D only. Native branch allocations are partial, with mixed branches unallocated.",{"font-size":12,fill:"#526777"});
+  text(svg,24,height-53,"Basque: companies + PNPI. Singapore RIE: S&T R&D only. Source branch allocations are partial, with mixed branches unallocated.",{"font-size":12,fill:"#526777"});
   text(svg,24,height-29,kind==="trade"?"MHT: C20,21,26–30. LMT: C10–19,22–25,31–33; goods exports exclude C33. Different denominators; no export/R&D ratio.":"Unallocated is not Other production. Missing is not zero. Complete-group ratios use exact economy/year/group joins.",{"font-size":12,fill:"#526777"});
   el("chart").replaceChildren(svg);
   const good=current.filter(a=>a.available),years=[...new Set(current.filter(a=>a.row).map(a=>a.year))].sort();
@@ -97,7 +97,7 @@ function nativeTable(){
 }
 function appendRow(target,values){const tr=document.createElement("tr");for(const value of values){const td=document.createElement("td");td.textContent=value;tr.append(td);}target.append(tr);}
 function table(){
-  const columns=["Economy","Year","Group","Assigned R&D · US$ bn","Group coverage","R&D share %","GVA · US$ bn","Employed persons","GVA/person · US$ thousand","R&D/GVA %","R&D/worker · US$","Goods exports · US$ bn","Source / status"];
+  const columns=["Economy","Year","Group","Assigned business R&D (US$ billion)","Group coverage","R&D share %","GVA · US$ bn","Employed persons","GVA per employed person (US$ thousand)","R&D/GVA %","Business R&D per employed person (US$)","Goods exports · US$ bn","Source / status"];
   const head=document.createElement("tr");for(const label of columns){const th=document.createElement("th");th.textContent=label;head.append(th);}el("table-head").replaceChildren(head);el("table-body").replaceChildren();el("context-body").replaceChildren();
   csvRows=[["iso3","economy","year","group","assigned_rd_usd","assigned_rd_local","currency","group_coverage","assigned_rd_share_percent","gva_usd","gva_share_percent","employed_persons","employment_share_percent","gva_per_person_usd_thousand","rd_percent_sector_gva","rd_usd_per_sector_worker","goods_exports_usd","goods_exports_share_percent","reported_industry_rd_usd","unallocated_rd_usd","industry_rd_scope","industry_rd_source","coverage_status","rd_flags","rd_total_flags","gva_source","gva_flags","employment_source","employment_flags","exports_source","exports_flags","gerd_oecd_usd","gerd_wdi_usd","gerd_eustat_usd","gdp_per_capita_current_usd","build_utc","year_selection","source_table"]];
   for(const a of current){const r=a.row;data.groups.forEach((g,i)=>{

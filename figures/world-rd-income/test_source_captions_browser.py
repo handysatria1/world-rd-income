@@ -74,7 +74,7 @@ def main():
         with page.expect_download() as download:
             page.locator('#income-svg-download').click()
         svg = Path(download.value.path()).read_text('utf-8')
-        assert 'data-source-caption' in svg and 'Source:' in svg and 'IP.PAT.RESD' in svg
+        assert 'data-source-caption' in svg and 'Sources:' in svg and 'IP.PAT.RESD' in svg
         with page.expect_download() as download:
             page.locator('#income-png-download').click()
         png = Path(download.value.path()).read_bytes()

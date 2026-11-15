@@ -4,12 +4,12 @@ const RDCoverage=(()=>{
   const label=c=>c+' · '+(catalog.labels[c]||c);
   function describe(r,i){
     const g=data.groups[i],d=catalog.rows[[r.iso,r.year,g.id].join('/')];
-    if(!d)return {title:g.label,lines:['No industry observation in this economy/year.'],detail:null};
+    if(!d)return {title:g.label,lines:['No industry observation is available for this economy and year.'],detail:null};
     const lines=[d.coverage.toUpperCase()+' sector coverage',
       'Assigned R&D: '+r.currency+' '+fmt(r.assignedLocal[i]==null?null:r.assignedLocal[i]/1e6,3)+' million',
-      fmt(r.shares[i],2)+'% of reported total business R&D — NOT percent coverage of this sector.',d.reason,
+      fmt(r.shares[i],2)+'% of reported total business R&D. This is not a measure of sector coverage.',d.reason,
       'Included: '+(d.included.map(t=>(t.weight<0?'minus ':'')+label(t.code)).join('; ')||'No allocatable public components.'),
-      (d.native?'Unallocated native branches (not a known missing-sector list): ':'Not covered: ')+(d.missing.map(t=>label(t.code)+' — '+t.reason+(t.flags?' ['+t.flags+']':'')).join('; ')||'None.'),
+      (d.native?'Unallocated source branches (not a known missing-sector list): ':'Not covered: ')+(d.missing.map(t=>label(t.code)+' — '+t.reason+(t.flags?' ['+t.flags+']':'')).join('; ')||'None.'),
       'Scope: '+d.scope+'. Source: '+(data.sources[d.source]||d.source)+'.',
       'Selected source flags: '+(d.flags||'none reported')+'.',
       d.coverage==='complete'?'Whole-group ratios can be calculated when exact same-year denominators exist.':'Whole-group R&D/GVA and R&D per worker are unavailable for this partial group.'];

@@ -9,16 +9,16 @@ window.IncomeChart=(()=>{
   function save(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
   function csv(rows,name){if(!rows.length)return;const keys=Object.keys(rows[0]),q=v=>'"'+String(v??'').replaceAll('"','""')+'"';save(new Blob(['\ufeff'+[keys,...rows.map(r=>keys.map(k=>r[k]))].map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),name);}
   function render(input,shared){
-    $('income-inspector').textContent='Select a bar to see its value and the economies included.';
+    $('income-inspector').textContent='Select a bar to display the group value and included economies.';
     data=input;const years=[+$('income-year-a').value,+$('income-year-b').value];
-    if(years[0]===years[1])throw new Error('Choose two different comparison years.');
+    if(years[0]===years[1])throw new Error('Select two distinct comparison years.');
     const opts={years,vintage:shared.vintage,combine:shared.combine,ids:shared.ids,groups:shared.groups,
       stat:$('income-stat').value,sample:$('income-sample').value,patents:$('patent-mode').value};
     result=IncomeCore.aggregate(data,opts);
     const svg=node('svg',{id:'income-svg',xmlns:NS,width:1240,height:900,viewBox:'0 0 1240 900',role:'img','aria-label':'Four-panel income-group innovation comparison','font-family':'Arial, sans-serif'});
     svg.append(node('rect',{width:1240,height:900,fill:'white'}));
     text(svg,28,32,'R&D and innovation by income group',{'font-size':23,'font-weight':700});
-    text(svg,28,58,`${years.join(' versus ')} · fixed ${shared.vintage==='current'?data.currentVintage:shared.vintage} classification · ${opts.sample==='paired'?'paired economy samples per indicator':'available economies in each year'}`);
+    text(svg,28,58,`${years.join(' and ')} · fixed ${shared.vintage==='current'?data.currentVintage:shared.vintage} classification · ${opts.sample==='paired'?'matched economy sample for each indicator':'available economies in each year'}`);
     years.forEach((year,i)=>{svg.append(node('rect',{x:950+i*120,y:24,width:16,height:16,fill:colors[i]}));text(svg,974+i*120,38,year);});
     ['rd','researchers','patents','publications'].forEach((metric,p)=>{
       const rows=result.rows.filter(r=>r.metric===metric),groups=[...new Set(rows.map(r=>r.group))],x0=24+(p%2)*614,y0=100+Math.floor(p/2)*365,left=x0+78,top=y0+52,w=500,h=220;
@@ -43,14 +43,14 @@ window.IncomeChart=(()=>{
         const label=code==='HIC'?['High','income']:code==='UMC'?['Upper-middle','income']:code==='LMC'?['Lower-middle','income']:code==='MIC'?['Middle','income']:['Low','income'];
         label.forEach((s,i)=>text(svg,center,top+h+38+i*15,s,{'text-anchor':'middle','font-size':12}));
       });
-      if(!groups.length)text(svg,left+w/2,top+h/2,'No classified groups in this selection',{'text-anchor':'middle'});
+      if(!groups.length)text(svg,left+w/2,top+h/2,'No classified income groups are available for this selection.',{'text-anchor':'middle'});
     });
     text(svg,28,847,'Handy Satria · World Bank WDI: UNESCO UIS, WIPO and NSF source series. Exact years only; missing is not zero.',{'font-size':12});
-    text(svg,28,868,'Means are unweighted across economies. Sums cover observed economies only. Sample sizes differ between indicators.',{'font-size':12});
+    text(svg,28,868,'Means give equal weight to each economy. Sums include only economies with observations. Sample sizes vary by indicator.',{'font-size':12});
     $('income-chart').replaceChildren(svg);
     $('income-status').textContent=`${result.rows.length} group-year statistics. ${data.currentVintage} is based on 2025 Atlas-method GNI per capita. Regional and unclassified economies are excluded from group statistics. Indicator vintages are listed below.`;
     const table=$('income-table'),columns=['metric','group_label','year','value','method','n','eligible','classification','included','missing'];
-    table.tHead.replaceChildren();table.tBodies[0].replaceChildren();const h=table.tHead.insertRow();for(const key of columns){const th=document.createElement('th');th.textContent=key.replaceAll('_',' ');h.append(th);}
+    table.tHead.replaceChildren();table.tBodies[0].replaceChildren();const h=table.tHead.insertRow();for(const key of columns){const th=document.createElement('th');th.textContent=window.SourceCaptions?.columnLabel(key)||key.replaceAll('_',' ');h.append(th);}
     for(const r of result.rows){const tr=table.tBodies[0].insertRow();for(const key of columns){const td=tr.insertCell();td.textContent=key==='value'?fmt(r[key]):r[key];}}
   }
   function initialize(input){

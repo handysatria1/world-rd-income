@@ -106,7 +106,7 @@
     $('capacity-chart').replaceChildren(drawChart(groups,metric));
     fillTable('capacity-groups-table',groups,[
       {key:'income_group',label:'World Bank income group'},
-      {key:'mean_of_country_means',label:'Average of country means',format:fmt},
+      {key:'mean_of_country_means',label:'Unweighted mean of country means',format:fmt},
       {key:'economies_with_data',label:'Countries with data'},
       {key:'economies_in_group',label:'Countries classified'},
       {key:'coverage_percent',label:'Coverage',format:v=>v==null?'—':fmt(v)+'%'},

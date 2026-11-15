@@ -14,7 +14,7 @@ const OfficialIndustries=(()=>{
     const sources=[...new Set(available.map(r=>r.source))];source.replaceChildren(...sources.map(s=>new Option(names[s]||s,s)));source.value=sources.includes(old)?old:sources[0]||'';
     const candidates=available.filter(r=>r.source===source.value),year=Math.max(...candidates.map(r=>r.year));
     selected=candidates.filter(r=>r.year===year);
-    $('official-status').textContent=selected.length?`${state.names[iso]||iso} · ${metric} · ${year} · ${selected[0].scope}. Values in million ${selected[0].currency}; converted US$ use that observation year’s exchange rate.`:'No verified source-native observations for this economy / year selection.';
+    $('official-status').textContent=selected.length?`${state.names[iso]||iso} · ${metric} · ${year} · ${selected[0].scope}. Values in million ${selected[0].currency}; converted US$ use that observation year’s exchange rate.`:"No verified observations in the source's original industry categories are available for the selected economy and year.";
     $('official-note').textContent=[...new Set(selected.map(r=>r.note).filter(Boolean))].join(' ');
     const body=$('official-table').tBodies[0];body.replaceChildren();
     for(const r of selected){

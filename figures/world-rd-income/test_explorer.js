@@ -25,7 +25,7 @@ const core = require("./explorer_core.js");
   const rows = ['HIC','HIC','UMC','LMC','LIC','UNK'].map(iso=>({country:{iso}}));
   context.rows=rows;vm.runInContext('incomeLegend(rows)',context);
   const labels = () => legend.children.slice(0,-1).map(item=>item.children[1].textContent);
-  assert.deepEqual(labels(), ['High income (n=2)','Upper-middle income (n=1)','Lower-middle income (n=1)','Low income (n=1)','Unclassified / region (n=1)']);
+  assert.deepEqual(labels(), ['High income (n=2)','Upper-middle income (n=1)','Lower-middle income (n=1)','Low income (n=1)','Unclassified or regional (n=1)']);
   const markers = legend.children.slice(0,-1).map(item=>item.children[0].children[0]);
   assert.deepEqual(markers.map(m=>m.tag), ['circle','rect','path','path','path']);
   assert.deepEqual(markers.map(m=>m.attrs.fill), ['#2878df','#f06432','#10b981','#f0a000','#687787']);

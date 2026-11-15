@@ -2,22 +2,22 @@
 window.Dashboard=(()=>{
   const $=id=>document.getElementById(id),defaults=['KOR','SGP','CHN','ES-PV','USA','GBR'];
   const views=[
-    ['snapshot','snapshot','R&D expenditure and income','national','snapshot'],['compare','snapshot','Compare two years','national','compare'],['history','snapshot','Trends by economy','national','history'],
-    ['researchers','income','Researchers by economy',null,'researchers'],['patents','income','Patent applications by economy',null,'patents'],['publications','income','Journal articles by economy',null,'publications'],
+    ['snapshot','snapshot','R&D intensity and GDP per capita','national','snapshot'],['compare','snapshot','Two-year comparison','national','compare'],['history','snapshot','Trends by economy','national','history'],
+    ['researchers','income','Researchers in R&D by economy',null,'researchers'],['patents','income','Patent applications by economy',null,'patents'],['publications','income','Scientific and technical journal articles by economy',null,'publications'],
     ['internet-users','income','Internet users by economy',null,'internetUsers'],
     ['government-effectiveness-score','income','Government effectiveness score (0–100)',null,'governmentEffectiveness'],
     ['government-effectiveness','income','Government effectiveness estimate by economy',null,'governmentEffectivenessEstimate'],
     ['human-capital','income','Human Capital Index by economy',null,'humanCapitalIndex'],
-    ['bachelor-attainment','income',"Bachelor's attainment by economy",null,'bachelorAttainment'],
-    ['absorptive-capacity','income','Absorptive-capacity averages by income group',null,'capacity'],
+    ['bachelor-attainment','income',"Bachelor's degree attainment by economy",null,'bachelorAttainment'],
+    ['absorptive-capacity','income','Absorptive-capacity indicators: income-group means',null,'capacity'],
     ['income','income','R&D and innovation by income group',null,null],
-    ['breakdown','national','R&D funding and performance','national','breakdown'],['sector','national','R&D by sector and field','national','sector'],
-     ['research','rd','Value added and business R&D','research','comparison'],
-     ['research-six','rd','Value added and business R&D · 6 sectors','researchsix','comparison'],
-    ...[['comparison','Sector shares: GVA, R&D and employment'],['composition','Business R&D by sector'],['intensity','Business R&D (% of sector GVA)'],['perWorker','Business R&D per worker'],['productivity','R&D intensity and productivity'],['trade','Manufacturing R&D and exports']].map(([k,t])=>['rd-'+k,'rd',t,'rd',k]),
+    ['breakdown','national','R&D funding and performing sectors','national','breakdown'],['sector','national','R&D by performing sector and field','national','sector'],
+     ['research','rd','Gross value added and business R&D · 16 industry groups','research','comparison'],
+     ['research-six','rd','Gross value added and business R&D · 6 sectors','researchsix','comparison'],
+    ...[['comparison','Sector shares: GVA, business R&D and employment'],['composition','Business R&D by sector'],['intensity','Business R&D (% of sector GVA)'],['perWorker','Business R&D per employed person'],['productivity','Business R&D intensity and labour productivity'],['trade','Manufacturing R&D and goods-export shares']].map(([k,t])=>['rd-'+k,'rd',t,'rd',k]),
     ['gva','economy','Gross value added by sector','gva','gva'],
-    ...[['employment','Employment by sector'],['comparison','GVA and employment shares'],['sector','Productivity by sector'],['economy','Productivity by economy'],['exports','Goods exports by sector']].map(([k,t])=>['economy-'+k,'economy',t,'economy',k]),
-    ['detail','data','Industry data tables','detail','detail'],['sources','data','Definitions and sources','sources','sources']
+    ...[['employment','Employment by sector'],['comparison','GVA and employment shares'],['sector','GVA per employed person by sector'],['economy','GVA per employed person by economy'],['exports','Goods exports by manufacturing technology group']].map(([k,t])=>['economy-'+k,'economy',t,'economy',k]),
+    ['detail','data','Industry data tables','detail','detail'],['sources','data','Data sources and methods','sources','sources']
   ];
   const files={national:'view-national.html',rd:'view-rd.html',gva:'view-gva.html',economy:'view-economy.html',research:'view-research.html',researchsix:'view-research-six.html',detail:'view-detail.html',sources:'view-sources.html'};
   let data=null,capacity=null,ids=[...defaults],frames=new Map(),request=0;
@@ -45,7 +45,7 @@ window.Dashboard=(()=>{
       for(const [symbol,label,action,disabled]of[['←','Move left',()=>{[ids[i-1],ids[i]]=[ids[i],ids[i-1]];},i===0],['→','Move right',()=>{[ids[i+1],ids[i]]=[ids[i],ids[i+1]];},i===ids.length-1],['×','Remove',()=>{ids=ids.filter(id=>id!==iso);},false]]){const b=document.createElement('button');b.textContent=symbol;b.disabled=disabled;b.setAttribute('aria-label',label+' '+map[iso]);b.onclick=()=>{action();chips();update();};chip.append(b);}$('selected-economies').append(chip);
     });$('selection-count').textContent=`· ${ids.length} selected`;
     const codes=$('combine-middle').checked?['HIC','MIC','LIC','UNK']:['HIC','UMC','LMC','LIC','UNK'];$('income-legend').textContent=codes.map(c=>IncomeCore.symbols[c]+' '+IncomeCore.labels[c]).join('   ·   ');
-    $('classification-note').textContent=$('income-vintage').value==='current'?`${data.currentVintage} · July 2026–June 2027; based on 2025 Atlas-method GNI/person. Low ≤$1,175; lower-middle $1,176–4,635; upper-middle $4,636–14,375; high >$14,375. These are income groups; “advanced” and “emerging” are different classifications.`:`Fixed ${$('income-vintage').value} classification from the official historical workbook, applied to all displayed years. It is not a classification calculated from the chart’s GDP/person.`;
+    $('classification-note').textContent=$('income-vintage').value==='current'?`${data.currentVintage}, July 2026–June 2027, based on 2025 GNI per capita using the World Bank Atlas method. Thresholds (US$): low income, ≤1,175; lower-middle income, 1,176–4,635; upper-middle income, 4,636–14,375; high income, >14,375. These income groups are distinct from classifications of advanced and emerging economies.`:`The ${$('income-vintage').value} World Bank income classification is applied to all displayed years, using membership recorded in the official historical workbook. Group membership is not calculated from the GDP per capita values shown in the chart.`;
     choices();
   }
   function frame(key){
@@ -63,7 +63,7 @@ window.Dashboard=(()=>{
     const global=['snapshot','compare','income'].includes(id),hasYear=innovation||['snapshot','sector','research','research-six','gva','detail'].includes(id)||id.startsWith('rd-')||id.startsWith('economy-');
     $('scope-label').hidden=!global;$('shared-year-label').hidden=!hasYear;$('economy-settings').hidden=id==='sources'||capacityView;
     $('classification-control').hidden=!['rd','economy'].includes(section);$('industry-classification').value=id==='research'?'research':'six';
-     $('year-help').textContent=innovation?'Compare selected economies. Latest available uses each economy’s latest observation; latest common year requires data for every selected economy. Choose an exact year for a fixed-year comparison.':id==='absorptive-capacity'?'Choose one year, a custom year range or the most recent five years; country and group averages recalculate from observed annual data.':id==='income'?'Select two years below to compare income groups.':id==='sources'?'Data providers, methods and downloads.':hasYear?'Latest available uses the most recent year with the data required for this chart. Reporting years are shown; a selected year uses only that year.':'Select the time period below. Economy selections apply across views.';
+     $('year-help').textContent=innovation?'‘Latest available’ selects the most recent observation for each economy. ‘Latest common year’ requires the necessary observations for every selected economy. Selecting a specific year restricts the comparison to that year.':id==='absorptive-capacity'?'Choose one year, a custom year range or the most recent five years; country and group averages recalculate from observed annual data.':id==='income'?'Select two comparison years for the income-group analysis.':id==='sources'?'Data sources, calculation methods and downloads.':hasYear?'‘Latest available’ selects the most recent year with the observations required for the chart. Reporting years are displayed. Selecting a specific year restricts the comparison to that year.':'Select the analysis period below. Economy selections apply across views.';
     history.replaceState(null,'','#'+id);
     try{
       const state=selection();
@@ -87,7 +87,7 @@ window.Dashboard=(()=>{
       if(!capacityResponse.ok)throw new Error('Absorptive-capacity averages unavailable ('+capacityResponse.status+').');
       [data,capacity]=await Promise.all([response.json(),capacityResponse.json()]);
       if(capacity.builtUTC!==data.builtUTC)throw new Error('Income and absorptive-capacity data builds do not match.');
-      const sections={snapshot:'Income & R&D',income:'Innovation',national:'National R&D',rd:'Industry R&D',economy:'Economy & trade',data:'Data & sources'};
+      const sections={snapshot:'Income and R&D',income:'Innovation',national:'National R&D',rd:'Industry R&D',economy:'Economy and trade',data:'Data and sources'};
       for(const [key,label]of Object.entries(sections)){const g=document.createElement('optgroup');g.label=label;for(const v of views.filter(v=>v[1]===key))g.append(new Option(v[2],v[0]));$('view').append(g);}
       for(let year=2025;year>=2000;year--)$('shared-year').add(new Option(year,year));
       $('income-vintage').add(new Option('Current · '+data.currentVintage,'current'));for(const fy of data.historicalVintages)$('income-vintage').add(new Option(fy+' · fixed membership',fy));
