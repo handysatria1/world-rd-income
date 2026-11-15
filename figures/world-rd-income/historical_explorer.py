@@ -16,6 +16,7 @@ from basque_rd import load_basque, write_basque_csv
 from breakdown_sources import SOURCES as BREAKDOWN_SOURCES
 from official_sources import SOURCES as OFFICIAL_SOURCES
 from breakdown_rd import load_breakdowns, summary as breakdown_summary, write_breakdown_csvs
+from constant_ppp import attach_constant_ppp, write_audit
 
 ROOT = Path(__file__).resolve().parent
 RAW = ROOT / "data" / "raw"
@@ -92,7 +93,7 @@ def load_history() -> dict:
     breakdowns = load_breakdowns(RAW, manifest, countries)
     breakdowns["summary"] = breakdown_summary(breakdowns)
     names += [*NOMINAL_SOURCES, UIS_ARCHIVE, *SECTOR_FIELD_SOURCES, *BASQUE_SOURCES, *BREAKDOWN_SOURCES, *OFFICIAL_SOURCES]
-    return {
+    data = {
         "firstYear": HISTORY_START, "lastYear": HISTORY_END,
         "countries": sorted(countries.values(), key=lambda r: r["name"]),
         "benchmark": benchmark,
@@ -104,6 +105,9 @@ def load_history() -> dict:
         "datasetDates": {key: manifest[f"wb_{key}_history.json"].get("api_lastupdated", "") for key in INDICATORS},
         "sources": {name: manifest[name] for name in names},
     }
+    audit = attach_constant_ppp(data)
+    write_audit(ROOT / 'data/gdp_per_capita_ppp_constant_2021.csv', audit)
+    return data
 
 
 def build_explorer(report: dict, data: dict | None = None) -> None:

@@ -36,6 +36,8 @@ def build_dashboard(destination):
     for name in ['government_industry_explorer.json','government_industry_observations.csv','government_industry_verification.json']:
         copy(name,ROOT/'data'/name)
     data=json.loads((ROOT/'data/explorer_history.json').read_text('utf-8'))
+    copy('gdp_per_capita_ppp_constant_2021.csv',ROOT/'data/gdp_per_capita_ppp_constant_2021.csv')
+    put('constant_ppp_manifest.json',json.dumps(data['constantPPP'],indent=2)+'\n')
     income=json.loads((ROOT/'data/income_explorer.json').read_text('utf-8'))
     data['snapshotIndicators']=build_snapshot_indicators(
         income,

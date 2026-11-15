@@ -24,7 +24,7 @@
   const incomeFor=iso=>shared?IncomeCore.classify(shared.income,iso,shared.vintage,shared.combine):null;
   const fmt = (v, digits = 2) => v == null || !Number.isFinite(v) ? "—" : v.toLocaleString("en-US", {maximumFractionDigits: digits, minimumFractionDigits: digits});
   const short = v => v >= 1e12 ? `${+(v / 1e12).toFixed(1)}tn` : v >= 1e9 ? `${+(v / 1e9).toFixed(1)}bn` : v >= 1e6 ? `${+(v / 1e6).toFixed(1)}m` : v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : `${+v.toFixed(2)}`;
-  const unit = () => $("metric").value === "nominal" ? "current US dollars" : "current international dollars (PPP)";
+  const unit = () => ({nominal:"current US dollars",ppp:"current international dollars (PPP)",pppConstant:"constant 2021 international dollars (PPP)"})[$("metric").value];
   const rdWindow = (start, end) => start === end ? `${start}` : `${start}–${end}`;
   function snapshotIndicatorFor(iso,year){return snapshotIndicators.get(`${iso}|${year}`)||null;}
   function snapshotIndicatorLines(iso,year){
@@ -136,7 +136,7 @@
       `R&D mean: ${fmt(e.rd.value, 4)}% of GDP · window ${rdWindow(e.rd.start, e.rd.end)}\n` +
       `Reported years: ${e.rd.years.join(", ") || "none"} (${e.rd.years.length}/${e.rd.end - e.rd.start + 1})\n` +
       `Missing years: ${e.rd.missing.join(", ") || "none"}\nSource: ${e.rd.sourceName}\nFlags: ${e.rd.flags || "none reported"}` +
-      (c.note ? `\n${c.note}\nGDP flags: ${c.gdp[$("metric").value][e.gdpYear]?.flags || ""}` : "") +
+      (c.note ? `\n${c.note}\nGDP flags: ${c.gdp[$("metric").value]?.[e.gdpYear]?.flags || ""}` : "") +
       (incomeFor(c.iso)?`\nWorld Bank: ${incomeFor(c.iso).label} · ${incomeFor(c.iso).vintage}`:'')+
       (['snapshot','compare'].includes(view)?snapshotIndicatorLines(c.iso,e.gdpYear):'')+
       (e.reasons.length ? `\nExcluded: ${e.reasons.join("; ")}` : "");
@@ -320,7 +320,7 @@
       ...(r.start?{start_gdp_year:r.start.gdpYear,start_gdp:r.start[opts.metric],start_rd:r.start.rd.value,start_rd_window:rdWindow(r.start.rd.start,r.start.rd.end),start_rd_years:r.start.rd.years.join(";"),start_rd_flags:r.start.rd.flags}:{}),
       gdp_year:r.end.gdpYear,gdp_unit:unit(),gdp:r.end[opts.metric],rd:r.end.rd.value,rd_window:rdWindow(r.end.rd.start,r.end.rd.end),rd_years:r.end.rd.years.join(";"),rd_missing:r.end.rd.missing.join(";"),rd_flags:r.end.rd.flags,
       ...(r.start?{gdp_change:r.end[opts.metric]-r.start[opts.metric],gdp_change_percent:(r.end[opts.metric]/r.start[opts.metric]-1)*100,rd_change_pp:r.end.rd.value-r.start.rd.value}:{}),
-      gdp_status:r.country.gdp[opts.metric][r.end.gdpYear]?.flags||"",gdp_footnote:r.country.gdp[opts.metric][r.end.gdpYear]?.note||"",
+      gdp_status:r.country.gdp[opts.metric]?.[r.end.gdpYear]?.flags||"",gdp_footnote:r.country.gdp[opts.metric]?.[r.end.gdpYear]?.note||"",
       ...snapshotIndicatorFields(r.country.iso,r.end.gdpYear)}));
     const columns=[{key:"economy",label:"Economy"},{key:"code",label:"Code"},...(shared?[{key:'income_group',label:'World Bank group'},{key:'gdp_year',label:'GDP year'}]:[])];
     if(view==="compare")columns.push({key:"start_gdp",label:`GDP ${opts.from}`,format:v=>fmt(v)},{key:"start_rd",label:"Earlier R&D (%)",format:v=>fmt(v,4)});
@@ -567,14 +567,14 @@
         $("coverage-note").textContent="Nominal US$ totals are derived from the displayed provider's annual R&D share × same-year World Bank total GDP / 100. Input vintages and GDP denominators can differ. Each series displays its own available years. OECD reported national-currency amounts and provider alternatives are included in the table/CSV and full database.";
         if(current.source==="eustat")$("coverage-note").textContent=`Eustat reports current EUR amounts. USD and PPP totals divide these by same-year Spanish WDI exchange/PPP factors. R&D intensity is derived from Eustat expenditure / same-year Eustat GDP. ${current.country.note} ${current.country.rd.eustat[2025]?"":"The 2025 advance R&D release contains growth rates only; no annual level is inferred. "}See Basque annual conversions for all inputs.`;
         $("inspector").textContent=`${current.country.name} (${current.country.iso})\nR&D provider chosen by most annual observations in ${opts.from}–${opts.to}: ${current.sourceName}.\nHover over a year for values and source flags.`;
-        exported=current.rows.map(r=>({economy:current.country.name,code:current.country.iso,year:r.year,gdp_current_usd:r.nominal,gdp_current_international_dollars_ppp:r.ppp,rd_percent_gdp:r.rd,rd_source:current.sourceName,rd_flags:r.flags,rd_note:r.note,
+        exported=current.rows.map(r=>({economy:current.country.name,code:current.country.iso,year:r.year,gdp_current_usd:r.nominal,gdp_current_international_dollars_ppp:r.ppp,gdp_constant_2021_international_dollars_ppp:r.pppConstant,gdp_constant_ppp_indicator:'NY.GDP.PCAP.PP.KD',gdp_constant_ppp_flags:r.gdpPPPConstantFlags,gdp_constant_ppp_note:r.gdpPPPConstantNote,rd_percent_gdp:r.rd,rd_source:current.sourceName,rd_flags:r.flags,rd_note:r.note,
           rd_nominal_usd_derived:r.rdNominalUSD,rd_nominal_method:current.source==="eustat"?data.nominalRD.basqueMethod:data.nominalRD.formula,rd_nominal_missing_reason:r.rdNominalMissing,gdp_total_usd_input:r.gdpTotalUSD,gdp_total_flags:r.gdpTotalFlags,gdp_total_note:r.gdpTotalNote,
           gdp_usd_flags:r.gdpNominalFlags,gdp_ppp_flags:r.gdpPPPFlags,gdp_usd_note:r.gdpNominalNote,gdp_ppp_note:r.gdpPPPNote,
           rd_eustat_eur_reported:r.rdNominalEUR,rd_eustat_ppp_derived:r.rdNominalPPP,
           ...(current.source==="eustat"?Object.fromEntries(Object.entries(data.basqueAnnual.find(a=>a.year===r.year)||{}).map(([k,v])=>["basque_"+k,v])):{}),
           rd_nominal_local_oecd_reported:r.rdNominalLocalOECD,rd_local_unit:"current national currency (OECD XDC), units",rd_local_flags:r.rdNominalLocalFlags,rd_local_note:r.rdNominalLocalNote,
           rd_nominal_usd_oecd_derived:r.rdNominalUSDOECD,rd_nominal_usd_wdi_derived:r.rdNominalUSDWDI,rd_nominal_usd_uis_derived:r.rdNominalUSDUIS,rd_uis_flags:r.rdNominalUISFlags,rd_uis_note:r.rdNominalUISNote}));
-        table(exported,[{key:"year",label:"Year"},{key:"gdp_current_usd",label:"GDP/person (current US$)",format:v=>fmt(v)},{key:"gdp_current_international_dollars_ppp",label:"GDP/person (current international $, PPP)",format:v=>fmt(v)},{key:"rd_percent_gdp",label:"Annual R&D (% GDP)",format:v=>fmt(v,4)},{key:"rd_nominal_usd_derived",label:"Nominal R&D (derived US$)",format:v=>fmt(v,0)},...(current.source==="eustat"?[{key:"rd_eustat_eur_reported",label:"Eustat R&D (reported EUR)",format:v=>fmt(v,0)},{key:"rd_eustat_ppp_derived",label:"R&D (derived PPP, Spain proxy)",format:v=>fmt(v,0)}]:[{key:"rd_nominal_local_oecd_reported",label:"OECD R&D (reported national currency)",format:v=>fmt(v,0)}]),{key:"rd_flags",label:"R&D flags"}]);
+        table(exported,[{key:"year",label:"Year"},{key:"gdp_current_usd",label:"GDP/person (current US$)",format:v=>fmt(v)},{key:"gdp_current_international_dollars_ppp",label:"GDP/person (current international $, PPP)",format:v=>fmt(v)},{key:"gdp_constant_2021_international_dollars_ppp",label:"GDP/person (constant 2021 international $, PPP)",format:v=>fmt(v)},{key:"rd_percent_gdp",label:"Annual R&D (% GDP)",format:v=>fmt(v,4)},{key:"rd_nominal_usd_derived",label:"Nominal R&D (derived US$)",format:v=>fmt(v,0)},...(current.source==="eustat"?[{key:"rd_eustat_eur_reported",label:"Eustat R&D (reported EUR)",format:v=>fmt(v,0)},{key:"rd_eustat_ppp_derived",label:"R&D (derived PPP, Spain proxy)",format:v=>fmt(v,0)}]:[{key:"rd_nominal_local_oecd_reported",label:"OECD R&D (reported national currency)",format:v=>fmt(v,0)}]),{key:"rd_flags",label:"R&D flags"}]);
         $("table-title").textContent=`${current.country.name}: annual history`;$("table-description").textContent="A dash means missing, not zero. National-currency amounts are units, not millions, and cannot be compared across currencies. CSV includes separate OECD/WDI/direct-UIS US$ estimates. Data include later historical revisions.";$("audit-section").hidden=true;
       } else {
         const sample=shared?{...data,countries:data.countries.filter(c=>shared.ids.includes(c.iso))}:data;
@@ -598,7 +598,8 @@
         $("legend").innerHTML=(view==="compare"?`<span><b class="key">□ → ●</b>${opts.from} → ${opts.to}; faint dashed fit = earlier year</span>`:"")+ '<span><b class="key">●</b>All R&D years reported</span><span><b class="key">○</b>Incomplete R&D window</span><span>Dotted curve: R&D = a + b ln(GDP)</span>';
         incomeLegend(current.rows);
         scatter(current,opts);plottedTable(current,opts);
-        $("coverage-note").textContent=view==="compare"?`${current.startEligible} economies eligible at the earlier endpoint; ${current.endEligible} at the later endpoint; ${current.rows.length} in the common comparison. Both fits use that same common sample. The CSV records the selected R&D provider and actual reporting years.`:`${current.rows.length} of ${data.countries.length} audited economies have R&D and both income measures for this selection. Missing values are excluded; hollow points and * labels mark incomplete R&D coverage.`;
+        $("coverage-note").textContent=view==="compare"?`${current.startEligible} economies eligible at the earlier endpoint; ${current.endEligible} at the later endpoint; ${current.rows.length} in the common comparison. Both fits use that same common sample. The CSV records the selected R&D provider and actual reporting years.`:`${current.rows.length} of ${data.countries.length} audited economies have R&D and ${opts.metric==='pppConstant'?'constant-2021 PPP income':'both current-price income measures'} for this selection. Missing values are excluded; hollow points and * labels mark incomplete R&D coverage.`;
+        if(opts.metric==='pppConstant')$("coverage-note").textContent+=' GDP source: World Bank NY.GDP.PCAP.PP.KD, constant 2021 international dollars. Basque Country has no observation in this country-level series and is not assigned Spain’s value or a current-price proxy.';
         if(!endFit)$("coverage-note").textContent+=" Regression unavailable: fewer than three valid points or no variation.";
         if(current.rows.some(r=>r.country.regressionEligible===false))$("coverage-note").textContent+=" Basque Country is a regional comparison point, excluded from both country fits because it overlaps Spain. Its PPP income uses Spain's national GDP-PPP factor as a proxy.";
         countryInfo();

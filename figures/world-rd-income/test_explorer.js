@@ -99,6 +99,29 @@ assert.equal(core.spearman([{x:1,y:1},{x:2,y:1},{x:3,y:1}]),null);
 assert.equal(core.ols([{x:1,y:1},{x:2,y:2}]),null);
 assert.equal(core.ols([{x:1,y:2},{x:2,y:2},{x:3,y:2}]),null);
 assert.equal(core.ols([{x:0,y:1},{x:2,y:2},{x:3,y:4}]),null);
+// The new constant-2021 PPP axis uses only its exact country/year cells. The
+// two existing current-price choices keep their original paired cohort.
+{
+  const aa=JSON.parse(JSON.stringify(a)),cc=JSON.parse(JSON.stringify(c));
+  aa.gdp.pppConstant=observations({2010:111,2022:222,2023:333});
+  cc.gdp.pppConstant=observations({2010:444,2023:555});
+  const dd={...data,countries:[aa,cc]};
+  const oo={...options,metric:'pppConstant'};
+  const constant=core.snapshot(dd,oo);
+  assert.deepEqual(constant.rows.map(r=>r.country.iso),['A','C']);
+  assert.equal(constant.rows[0].end.pppConstant,333);
+  assert.deepEqual(core.snapshot(dd,{...oo,metric:'nominal'}).rows.map(r=>r.country.iso),['A']);
+  const paired=core.comparison(dd,oo);
+  assert.equal(paired.rows[0].start.pppConstant,111);
+  assert.equal(paired.rows[0].end.pppConstant,333);
+  assert.deepEqual(core.history(dd,'A',2021,2023).rows.map(r=>r.pppConstant),[null,222,333]);
+  delete aa.gdp.pppConstant[2023];
+  assert.match(core.snapshot(dd,oo).audit[0].end.reasons.join(';'),/Missing 2023 constant-2021 PPP/);
+  assert.equal(core.comparison(dd,oo).rows.length,0); // no earlier-year fallback
+  assert.equal(core.latestSnapshot({...dd,countries:[aa]},oo).rows[0].end.gdpYear,2022);
+  const common=core.latestSnapshot(dd,oo,true);
+  assert.equal(common.rows.length,0); // no invented shared observation year
+}
 // Joint cells are selected exactly, with totals retained and three kinds of absence.
 data.sectorField={columns:["iso3","year","sector_code","field_code","basis","amount","source_value","currency_code","base_year","availability","OBS_STATUS","CONF_STATUS"],
   rows:[["A",2023,"_T","_T","XDC_V",999,"0.000999","EUR","","available","",""],

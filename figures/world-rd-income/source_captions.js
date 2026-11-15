@@ -77,9 +77,11 @@
         if(c.table)codes.push(...(c.alternativeSources||[]));
         const rd=codes.map(code=>({oecd:providers.msti,wdi:source('World Bank WDI / UNESCO UIS (GERD)','https://data.worldbank.org/indicator/GB.XPD.RSDV.GD.ZS'),uis:providers.uis,eustat:providers.eustat,ons:providers.ons})[code]).filter(Boolean);
         const title=c.title||'';
-        if(kind!=='history'||!/Annual R&D expenditure/.test(title))items.push(source('World Bank WDI (GDP and conversion inputs)','https://data.worldbank.org/indicator/'+(c.ppp?'NY.GDP.PCAP.PP.CD':'NY.GDP.PCAP.CD')));
+        const constant=c.metric==='pppConstant'&&(kind!=='history'||c.table||/GDP per capita/.test(title));
+        if(kind!=='history'||!/Annual R&D expenditure/.test(title))items.push(source(constant?'World Bank WDI (GDP per capita, PPP, constant 2021 international $)':'World Bank WDI (GDP and conversion inputs)','https://data.worldbank.org/indicator/'+(constant?'NY.GDP.PCAP.PP.KD':c.ppp?'NY.GDP.PCAP.PP.CD':'NY.GDP.PCAP.CD')));
+        if(c.table&&kind==='history')items.push(source('World Bank WDI (current-price GDP and conversion inputs)','https://data.worldbank.org/indicator/NY.GDP.PCAP.CD'),source('World Bank WDI (GDP per capita, PPP, constant 2021 international $)','https://data.worldbank.org/indicator/NY.GDP.PCAP.PP.KD'));
         if(kind!=='history'||!/GDP per capita/.test(title)||c.table)items.push(...rd);
-        if(basque||codes.includes('eustat'))items.push(providers.eustat);
+        if((basque&&c.metric!=='pppConstant')||codes.includes('eustat'))items.push(providers.eustat);
         if(kind!=='history')items.push(providers.groups);
         if(c.table&&c.snapshotIndicators)items.push(indicator('humanCapitalIndex'),indicator('researchers'),indicator('bachelorAttainment'),source('World Bank WDI / UNIDO CIP (manufactured-export technology share)','https://data.worldbank.org/indicator/TX.MNF.TECH.ZS.UN'),...industrySources(sourceTokens(c.indicatorRows||[])));
         note='Author’s calculations: reported-year R&D averages and fitted statistics; currency totals, where shown, use same-year inputs. '+(c.period||'Reporting years are shown in the chart/table.')+' No missing years are substituted.';
@@ -128,7 +130,7 @@
     const filename=location.pathname.split('/').pop(),pages={'view-national.html':'national','view-rd.html':'rd','view-gva.html':'gva','view-economy.html':'economy','view-research.html':'research','view-research-six.html':'research','view-detail.html':'detail','view-sources.html':'sources'};
     const state=root.dashboardSourceState||(root.Dashboard?.data?root.Dashboard.selection:{});
     const api=root.dashboardAPI,c={page:pages[filename]||'dashboard',kind:state.kind,ids:state.ids,table:element.tagName.toLowerCase()==='table',target:element.id||element.querySelector('tbody')?.id,
-      title:element.previousElementSibling?.textContent||element.getAttribute('aria-label')||'',rows:api?.rows?.rows||api?.rows||[],ppp:value('metric')==='ppp',vintage:state.vintage==='current'?state.income?.currentVintage:state.vintage};
+      title:element.previousElementSibling?.textContent||element.getAttribute('aria-label')||'',rows:api?.rows?.rows||api?.rows||[],metric:value('metric'),ppp:value('metric')==='ppp',vintage:state.vintage==='current'?state.income?.currentVintage:state.vintage};
     if(!Array.isArray(c.rows))c.rows=[];
     if(c.page==='dashboard'){
       c.kind=element.closest('#capacity-panel')?'capacity':element.closest('#income-panel')?'income':state.kind;

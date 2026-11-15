@@ -54,7 +54,7 @@ def build_site(destination: Path) -> None:
 
     # Explicit package directories avoid publishing unrelated workspace material.
     files = [ROOT / name for name in (
-        "download_data.py", "reproduce_figures.py", "build_site.py",
+        "download_data.py", "reproduce_figures.py", "build_site.py", "constant_ppp.py", "test_constant_ppp.py", "test_constant_ppp_browser.py", "CONSTANT_PPP.md",
         "release_downloads.py", "test_release_downloads.py", "DOWNLOAD_HOSTING.md",
         "requirements.txt", "README.md", "AUTOMATION.md", "OFFICIAL_DATA.md", "historical_explorer.py",
         "CITATION.cff", "CITATION.bib",

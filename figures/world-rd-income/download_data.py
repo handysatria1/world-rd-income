@@ -226,6 +226,8 @@ def main() -> None:
     parser.add_argument("--refresh", action="store_true")
     args = parser.parse_args()
     refresh_inputs(args.refresh)
+    from constant_ppp import archive_inputs
+    archive_inputs(refresh=args.refresh)
 
 
 if __name__ == "__main__":

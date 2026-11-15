@@ -22,22 +22,27 @@
       value: years.length ? years.reduce((s, y) => s + country.rd[source][y].v, 0) / years.length : null,
       flags: years.map(y => `${y}: ${country.rd[source][y].flags || "unflagged"}`).join("; ")};
   }
-  function endpoint(country, gdpYear, start, end, strict, source) {
+  function endpoint(country, gdpYear, start, end, strict, source, metric) {
     const rd = rdSummary(country, start, end, source);
     const nominal = country.gdp.nominal[gdpYear]?.v ?? null;
     const ppp = country.gdp.ppp[gdpYear]?.v ?? null;
+    const pppConstant = country.gdp.pppConstant?.[gdpYear]?.v ?? null;
     const reasons = [];
     if (rd.value === null) reasons.push(`No R&D in ${start}–${end}`);
     else if (strict && !rd.complete) reasons.push(`Incomplete R&D in ${start}–${end}`);
-    if (nominal === null) reasons.push(`Missing ${gdpYear} current-US$ GDP`);
-    if (ppp === null) reasons.push(`Missing ${gdpYear} PPP GDP`);
-    return {gdpYear, nominal, ppp, rd, reasons, eligible: !reasons.length};
+    if (metric === 'pppConstant') {
+      if (pppConstant === null) reasons.push(`Missing ${gdpYear} constant-2021 PPP GDP (NY.GDP.PCAP.PP.KD)`);
+    } else {
+      if (nominal === null) reasons.push(`Missing ${gdpYear} current-US$ GDP`);
+      if (ppp === null) reasons.push(`Missing ${gdpYear} PPP GDP`);
+    }
+    return {gdpYear, nominal, ppp, pppConstant, rd, reasons, eligible: !reasons.length};
   }
   function snapshot(data, options) {
     checkYears(data, options.rdStart, options.rdEnd);
     checkYears(data, options.gdpYear, options.gdpYear);
     const audit = data.countries.map(country => ({country,
-      end: endpoint(country, options.gdpYear, options.rdStart, options.rdEnd, options.strict)}));
+      end: endpoint(country, options.gdpYear, options.rdStart, options.rdEnd, options.strict, undefined, options.metric)}));
     return {audit, rows: audit.filter(r => r.end.eligible), rdStart: options.rdStart, rdEnd: options.rdEnd};
   }
   function comparison(data, options) {
@@ -52,20 +57,20 @@
       // A single provider across both endpoints prevents source-switch artefacts.
       const source = pickSource(country, years);
       return {country,
-        start: endpoint(country, options.from, earlyStart, earlyEnd, options.strict, source),
-        end: endpoint(country, options.to, options.rdStart, options.rdEnd, options.strict, source)};
+        start: endpoint(country, options.from, earlyStart, earlyEnd, options.strict, source, options.metric),
+        end: endpoint(country, options.to, options.rdStart, options.rdEnd, options.strict, source, options.metric)};
     });
     return {audit, rows: audit.filter(r => r.start.eligible && r.end.eligible), earlyStart, earlyEnd,
       startEligible: audit.filter(r => r.start.eligible).length, endEligible: audit.filter(r => r.end.eligible).length};
   }
   function latestSnapshot(data, options, common=false) {
     const years=range(data.firstYear,data.lastYear).reverse();
-    const at=(country,year)=>endpoint(country,year,year,year,false);
+    const at=(country,year)=>endpoint(country,year,year,year,false,undefined,options.metric);
     const commonYear=common&&data.countries.length?years.find(y=>data.countries.every(c=>at(c,y).eligible)):null;
     const audit=data.countries.map(country=>{
       const year=common?commonYear:years.find(y=>at(country,y).eligible);
       const end=at(country,year??data.lastYear);
-      if(year==null){end.eligible=false;end.reasons.push(common?'No common exact year across the selected economies':'No year with R&D and both income measures');}
+      if(year==null){end.eligible=false;end.reasons.push(common?'No common exact year across the selected economies':options.metric==='pppConstant'?'No year with R&D and constant-2021 PPP income':'No year with R&D and both income measures');}
       return {country,end};
     });
     return {audit,rows:audit.filter(r=>r.end.eligible),latest:true,common,commonYear};
@@ -77,6 +82,9 @@
     const years = range(from, to), source = pickSource(country, years);
     return {country, source, sourceName: SOURCE_NAMES[source], rows: years.map(year => ({year,
       nominal: country.gdp.nominal[year]?.v ?? null, ppp: country.gdp.ppp[year]?.v ?? null,
+      pppConstant: country.gdp.pppConstant?.[year]?.v ?? null,
+      gdpPPPConstantNote: country.gdp.pppConstant?.[year]?.note || "",
+      gdpPPPConstantFlags: country.gdp.pppConstant?.[year]?.flags || "",
       rd: country.rd[source][year]?.v ?? null, flags: country.rd[source][year]?.flags || "",
       note: country.rd[source][year]?.note || "",
       rdNominalUSD: country.rdNominal?.usd[source]?.[year]?.v ?? null,

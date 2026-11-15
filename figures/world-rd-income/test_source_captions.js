@@ -6,6 +6,9 @@ let spec=captions.describe({page:'national',kind:'snapshot',ids:['USA','IDN','ES
 assert.match(labels(spec),/OECD MSTI/);assert.match(labels(spec),/World Bank WDI \/ UNESCO UIS/);assert.match(labels(spec),/Eustat/);assert.match(labels(spec),/income classifications/);
 assert.doesNotMatch(labels(spec),/WIPO/); // Do not copy the example's unsupported GERD attribution.
 assert.match(spec.note,/2020–2024/);
+spec=captions.describe({page:'national',kind:'snapshot',metric:'pppConstant',rows:[]});
+assert.ok(spec.items.some(item=>item.url.endsWith('/NY.GDP.PCAP.PP.KD')));
+assert.match(labels(spec),/constant 2021/);
 spec=captions.describe({page:'dashboard',kind:'patents',patents:'total',population:true,vintage:'FY2020',period:'2022'});
 assert.match(labels(spec),/IP.PAT.RESD/);assert.match(labels(spec),/IP.PAT.NRES/);assert.match(labels(spec),/SP.POP.TOTL/);assert.match(spec.note,/FY2020/);
 spec=captions.describe({page:'dashboard',kind:'patents',patents:'nonresident'});
