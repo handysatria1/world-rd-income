@@ -65,6 +65,7 @@ def main():
         frame.evaluate('()=>{SourceCaptions.refresh();SourceCaptions.refresh();}')
         assert frame.locator('svg.chart').first.get_attribute('viewBox') == before
         page.evaluate("async()=>{document.querySelector('#shared-year').value='2022';await Dashboard.update();}")
+        if frame.locator('.ui-advanced').count():frame.locator('.ui-advanced').first.evaluate('(el)=>el.open=true')
         frame.locator('#rdMode').select_option('3')
         frame.wait_for_function("document.querySelector('svg.chart [data-source-caption]')!=null")
         assert check_page(frame)['missingCharts'] == 0

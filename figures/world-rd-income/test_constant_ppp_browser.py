@@ -26,6 +26,7 @@ def main():
         page.wait_for_function('window.Dashboard?.data != null')
         page.evaluate("async()=>{document.querySelector('#view').value='snapshot';document.querySelector('#shared-year').value='2022';await Dashboard.update();}")
         frame = next(frame for frame in page.frames[1:] if frame.frame_element().is_visible())
+        if frame.locator('.ui-advanced').count():frame.locator('.ui-advanced').first.evaluate('(el)=>el.open=true')
         assert frame.locator('#metric option').all_text_contents() == [
             'Current US$', 'PPP (current international $)', 'PPP (constant 2021 international $)']
         baseline = frame.evaluate('RDExplorer.result.rows.map(r=>r.country.iso)')

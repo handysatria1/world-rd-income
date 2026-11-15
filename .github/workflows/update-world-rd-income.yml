@@ -55,6 +55,7 @@ jobs:
           node test_rd_industry.js
           node test_income.js
           node test_source_captions.js
+          node test_dashboard_ui.js
           python -m unittest test_snapshot_indicators.py
           python -m unittest test_income_data.py
           python -m unittest test_constant_ppp.py

@@ -77,7 +77,7 @@ window.Dashboard=(()=>{
       else if(key!=='sources')throw new Error('The selected view did not initialize. Please reload.');
       if(token!==request)return;
       const error=iframe.contentDocument.getElementById('error');if(error&&!error.hidden)throw new Error(error.textContent);
-    }catch(error){if(token===request){$('dashboard-error').textContent=error.message;$('dashboard-error').hidden=false;}}finally{if(token===request)$('loading').hidden=true;}
+    }catch(error){if(token===request){$('dashboard-error').textContent=error.message;$('dashboard-error').hidden=false;}}finally{if(token===request){$('loading').hidden=true;window.DashboardUI?.refresh();}}
   }
   function navigate(id){if(!views.some(v=>v[0]===id))id='snapshot';$('view').value=id;update();}
   async function initialize(){
@@ -100,6 +100,7 @@ window.Dashboard=(()=>{
       $('economy-search').oninput=choices;$('example-economies').onclick=()=>{ids=[...defaults];chips();update();};$('clear-economies').onclick=()=>{ids=[];chips();update();};
       $('use-selection').onclick=()=>{$('sample-scope').value='selected';update();};
       document.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(views.find(v=>v[1]===b.dataset.section)[0]));
+      await window.DashboardUI?.initialize({getIds:()=>[...ids],setIds:value=>{ids=value;},chips,sectionFor:id=>views.find(v=>v[0]===id)?.[1],frames});
       window.addEventListener('hashchange',()=>navigate(location.hash.slice(1)));navigate(location.hash.slice(1)||'snapshot');
     }catch(error){$('dashboard-error').textContent=error.message;$('dashboard-error').hidden=false;}
   }
