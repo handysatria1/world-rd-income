@@ -121,6 +121,8 @@
     $("sector-year-control").hidden = view !== "sector";
     $("gerd-basis-control").hidden = view !== "sector";
     $("export").textContent = "Download data (CSV)";
+    $("export-all-years").hidden = view === "sector";
+    $("all-years-note").hidden = view === "sector";
     $("history-button").hidden = ["history", "breakdown"].includes(view);
     $("history-button").disabled = !$("country").value;
     if(shared&&view==='snapshot'&&['latest','common'].includes(shared.year))$("rd-controls").hidden=true;
@@ -628,6 +630,9 @@
   $("example").addEventListener("click",()=>{reset();view="compare";render();});
   $("export").addEventListener("click",()=>{
     downloadCSV(exported,view==="sector"?`gerd-sector-field-${$("country").value}-${$("sectorYear").value}-${$("gerdBasis").value}.csv`:`rd-income-${view}-${$("metric").value}.csv`);
+  });
+  $("export-all-years").addEventListener("click",()=>{
+    downloadCSV(core.allAnnualRows(data),`rd-intensity-gdp-per-capita-all-economies-${data.firstYear}-${data.lastYear}.csv`);
   });
   $("refresh-status").textContent=`Historical data retrieved (UTC): ${data.retrievalDates.join(", ")} · Build: ${data.builtUTC}`;
   $("source-details").textContent=`Archive range: ${data.firstYear}–${data.lastYear}. WDI dataset-level update dates: ${Object.entries(data.datasetDates).map(([k,v])=>`${k}: ${v||"not supplied"}`).join("; ")}. These are not individual observation revision dates. Exact response URLs, timestamps, SHA-256 checksums and source flags are retained in the downloadable build.`;

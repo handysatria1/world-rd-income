@@ -105,6 +105,37 @@
       rdNominalUISFlags: country.rdNominal?.usd.uis[year]?.flags || "",
       rdNominalUISNote: country.rdNominal?.usd.uis[year]?.note || ""}))};
   }
+  function allAnnualRows(data) {
+    // A complete economy/year panel, independent of chart/sample filters.
+    // Each year uses the existing single-year source rule, not a period average.
+    const providers = [...new Set([...Object.keys(SOURCE_NAMES), ...data.countries.flatMap(c => Object.keys(c.rd))])];
+    return data.countries.flatMap(country => range(data.firstYear, data.lastYear).map(year => {
+      const rd = rdSummary(country, year, year), observation = country.rd[rd.source]?.[year];
+      const row = {economy_code:country.iso, economy:country.name,
+        geography_type:country.geographyType || 'economy', parent_economy:country.parentEconomy || '', year,
+        rd_intensity_percent_gdp:rd.value, rd_source_code:rd.source || '', rd_source:rd.sourceName || rd.source || '',
+        rd_flags:observation?.flags || '', rd_notes:observation?.note || '',
+        rd_source_selection:'Single-year coverage; existing provider priority on ties. Source may vary by year; no multi-year averaging.'};
+      for(const [metric,label,indicator] of [['nominal','current_usd','NY.GDP.PCAP.CD'],['ppp','ppp_current_international_dollars','NY.GDP.PCAP.PP.CD'],['pppConstant','ppp_constant_2021_international_dollars','NY.GDP.PCAP.PP.KD']]) {
+        const cell = country.gdp[metric]?.[year], key = 'gdp_per_capita_' + label;
+        row[key] = cell?.v ?? null;
+        row[key + '_source'] = country.geographyType === 'region' && metric !== 'pppConstant' ? 'Eustat; same-year Spain WDI conversion factors (see notes)' : 'World Bank WDI (' + indicator + ')';
+        row[key + '_flags'] = cell?.flags || '';
+        row[key + '_notes'] = cell?.note || '';
+        row[key + '_source_record'] = cell?.sourceRecord || '';
+      }
+      // Retain every provider's annual observation, including non-selected alternatives.
+      for(const provider of providers) {
+        const cell = country.rd[provider]?.[year], key = 'rd_' + provider;
+        row[key + '_percent_gdp'] = cell?.v ?? null;
+        row[key + '_flags'] = cell?.flags || '';
+        row[key + '_notes'] = cell?.note || '';
+      }
+      row.geography_notes = country.note || '';
+      row.data_build_utc = data.builtUTC || '';
+      return row;
+    }));
+  }
   function sectorField(data, iso, year, basis) {
     checkYears(data, year, year);
     const dataset = data.sectorField, country = data.countries.find(c => c.iso === iso);
@@ -184,7 +215,7 @@
     const xy = xs.reduce((sum, value, index) => sum + (value - mx) * (ys[index] - my), 0);
     return {n, rho: xy / Math.sqrt(xx * yy)};
   }
-  const api = {range, checkYears, pickSource, rdSummary, snapshot, latestSnapshot, comparison, history, sectorField, ols, spearman, regressionRows, SOURCE_NAMES};
+  const api = {range, checkYears, pickSource, rdSummary, snapshot, latestSnapshot, comparison, history, allAnnualRows, sectorField, ols, spearman, regressionRows, SOURCE_NAMES};
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.RDCore = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
